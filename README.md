@@ -21,7 +21,8 @@ and switch on the developer console. It comes with a GUI and a command-line inte
 |------|--------------|
 | **Game overview** | Detects the Ren'Py version, Python 2/3 runtime, archives, scripts, the game's save directory name and all of its save folders. |
 | **Archive tool** | Browse `.rpa` archives with a filter, extract everything or only selected files, and pack a folder into a new RPA‑3.0 archive. Supports RPA‑3.x (including multi-key variants such as RPA‑3.2), RPA‑2.0 and RPA‑1.0 (`.rpi`). |
-| **Decompiler** | Turns compiled `.rpyc` scripts back into readable `.rpy`. It reads loose files and scripts inside archives, with a live preview and batch export. |
+| **Decompiler** | Turns compiled `.rpyc` scripts back into readable `.rpy`. It reads loose files and scripts inside archives, and can export everything in one batch. |
+| **Script editor** | Edit any script right in the preview and save it into the game with Ctrl+S, e.g. to flip a boolean. The game uses your version on its next start. **Restore original** undoes it. |
 | **Save editor** | Finds every save on the machine and opens the most recent one with one click. Shows the screenshot and save name, browses all variables as a tree (including nested objects, lists and dicts), and edits values. |
 | **Persistent editor** | Edits `persistent` data such as gallery and ending unlocks, or seen-text flags. |
 | **Save signing** | Ren'Py 8.1+ signs saves and persistent data. Edited files are re-signed with **your own** local key, so the game accepts them without warnings. |
@@ -69,9 +70,28 @@ By default, files are extracted to `<game folder>/extracted/<archive name>`, **o
 
 **Create archive from folder…** packs any folder into an RPA‑3.0 archive that Ren'Py can load.
 
-### Decompiler
-Lists every compiled script, both loose files and those inside archives. Click one to preview the decompiled
-source. **Decompile all** writes `.rpy` files to `<game folder>/decompiled`, keeping the folder structure.
+### Scripts (decompiler & editor)
+Lists every compiled script, both loose files and those inside archives. Click one to open its decompiled
+source in the editor. Use **Find** (Ctrl+F) to jump to what you're looking for.
+
+To change the game, edit the code (for example `default unlocked_all = False` → `True`) and press
+**Save to game** (Ctrl+S). The game uses your version the next time it starts. Edited scripts are marked
+with ✎. Close the game before saving.
+
+What happens behind the scenes:
+- Your text is saved as `game/<script>.rpy` next to the compiled `.rpyc`. Ren'Py notices the source changed
+  and recompiles it at startup. It reuses statement names from the old `.rpyc`, so **existing saves keep working**.
+- If the script was inside an archive, Ren'Py would otherwise load both copies (duplicate labels). So the
+  entry is removed from the archive's *index*. The data itself stays in the archive, and the original
+  `.rpyc` is placed next to your `.rpy`.
+- Originals (scripts and archive indexes) are backed up to `<game folder>/renpy_suite_backup/`.
+  **Restore original** puts everything back exactly as it was.
+
+Because decompilation is best-effort, check a script you edit for `# [renpy-suite]` comments. If the game
+shows an error after your change, use **Restore original**.
+
+**Decompile all** writes `.rpy` files to `<game folder>/decompiled`, keeping the folder structure. These are
+read-only copies for browsing and searching, and the game doesn't use them.
 
 ### Save Editor
 1. Click **Open latest save**, or pick any save from the list. Without a game selected, saves of *all*
@@ -139,8 +159,9 @@ including compiled and archived ones.
 - **Your own key only.** Re-signing uses the signing key that Ren'Py already created on *your* computer
   (`<RenPy dir>/tokens/security_keys.txt`). RenPy Suite never creates, exports or changes keys. If no key is
   found, you are warned before saving.
-- **The game folder is left alone.** Extraction and decompilation go to separate folders. The only file
-  written into `game/` is the optional developer patch.
+- **The game folder is only changed on request.** Extraction and decompilation go to separate folders. The
+  game itself is only changed by the developer patch and by **Save to game** in the script editor. Both can
+  be undone with one click.
 
 ## Supported formats
 
@@ -172,6 +193,7 @@ including compiled and archived ones.
 renpy_suite/
   rpa.py          archive reading / writing
   rpyc.py         .rpyc decompiler
+  scriptedit.py   saving edited scripts into a game, with backup/restore
   saves.py        save + persistent files
   savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
   stubpickle.py   safe, round-trip capable unpickler

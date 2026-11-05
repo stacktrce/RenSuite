@@ -44,6 +44,71 @@ def _prefix_bytes(prefix) -> bytes:
     return str(prefix).encode("latin-1")
 
 
+def locate_index(path):
+    """``(version, xor_key, index_offset)``; offset is None for RPA-1.0 (.rpi file)."""
+    path = Path(path)
+    with open(path, "rb") as f:
+        header = f.read(256).split(b"\n", 1)[0]
+    if header.startswith(b"RPA-3."):
+        fields = header.split()
+        key = 0
+        for field in fields[2:]:
+            key ^= int(field, 16)
+        return fields[0].decode("ascii", "replace"), key, int(fields[1], 16)
+    if header.startswith(b"RPA-2.0"):
+        return "RPA-2.0", 0, int(header.split()[1], 16)
+    if path.with_suffix(".rpi").is_file():
+        return "RPA-1.0", 0, None
+    raise RPAError("unknown archive format (header %r)" % header[:16])
+
+
+def read_index_bytes(path) -> bytes:
+    """The compressed index exactly as stored in the archive."""
+    path = Path(path)
+    _, _, offset = locate_index(path)
+    if offset is None:
+        return path.with_suffix(".rpi").read_bytes()
+    with open(path, "rb") as f:
+        f.seek(offset)
+        return f.read()
+
+
+def parse_index_bytes(data: bytes) -> dict:
+    """The raw (still obfuscated) index: ``{name: [(offset, length[, prefix])]}``."""
+    try:
+        raw = stubpickle.loads(zlib.decompress(data), allow_stubs=False)
+    except Exception as exc:
+        raise RPAError("archive index is damaged or obfuscated: %s" % exc) from exc
+    if not isinstance(raw, dict):
+        raise RPAError("archive index has an unexpected type")
+    return raw
+
+
+def load_raw_index(path) -> dict:
+    return parse_index_bytes(read_index_bytes(path))
+
+
+def save_raw_index(path, raw: dict):
+    """Replace an archive's index in place. File data is left untouched."""
+    path = Path(path)
+    _, _, offset = locate_index(path)
+    data = zlib.compress(stubpickle.dumps(raw), 9)
+    if offset is None:
+        path.with_suffix(".rpi").write_bytes(data)
+        return
+    with open(path, "r+b") as f:
+        f.seek(offset)
+        f.write(data)
+        f.truncate()
+
+
+def find_raw_key(raw: dict, member: str):
+    for k in raw:
+        if _member_name(k) == member:
+            return k
+    return None
+
+
 class RPAArchive:
     """A Ren'Py archive opened for reading."""
 
@@ -52,38 +117,8 @@ class RPAArchive:
         self.version, self.index = self._read_index()
 
     def _read_index(self):
-        with open(self.path, "rb") as f:
-            header = f.read(256).split(b"\n", 1)[0]
-            if header.startswith(b"RPA-3."):
-                fields = header.split()[1:]
-                offset = int(fields[0], 16)
-                key = 0
-                for field in fields[1:]:
-                    key ^= int(field, 16)
-                version = header.split()[0].decode("ascii", "replace")
-                f.seek(offset)
-                raw_index = f.read()
-            elif header.startswith(b"RPA-2.0"):
-                offset = int(header.split()[1], 16)
-                key = 0
-                version = "RPA-2.0"
-                f.seek(offset)
-                raw_index = f.read()
-            else:
-                rpi = self.path.with_suffix(".rpi")
-                if not rpi.is_file():
-                    raise RPAError("unknown archive format (header %r)" % header[:16])
-                key = 0
-                version = "RPA-1.0"
-                raw_index = rpi.read_bytes()
-
-        try:
-            raw = stubpickle.loads(zlib.decompress(raw_index), allow_stubs=False)
-        except Exception as exc:
-            raise RPAError("archive index is damaged or obfuscated: %s" % exc) from exc
-        if not isinstance(raw, dict):
-            raise RPAError("archive index has an unexpected type")
-
+        version, key, _ = locate_index(self.path)
+        raw = load_raw_index(self.path)
         index = {}
         for name, entries in raw.items():
             parts = []
