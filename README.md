@@ -1,0 +1,209 @@
+# RenPy Suite
+
+An all-in-one toolkit for inspecting and modding [Ren'Py](https://www.renpy.org/) games:
+unpack and create archives, decompile scripts, edit save games and persistent data,
+and switch on the developer console. It comes with a GUI and a command-line interface.
+
+![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
+![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
+![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
+- **Pure Python standard library.** No `pip install` needed.
+- **Safe by design.** Ren'Py files are Python pickles, and RenPy Suite never executes code from them (see [Safety](#safety)).
+- **Multilingual UI.** The interface follows your system language. It currently ships in English and German.
+
+---
+
+## Features
+
+| Tool | What it does |
+|------|--------------|
+| **Game overview** | Detects the Ren'Py version, Python 2/3 runtime, archives, scripts, the game's save directory name and all of its save folders. |
+| **Archive tool** | Browse `.rpa` archives with a filter, extract everything or only selected files, and pack a folder into a new RPA‑3.0 archive. Supports RPA‑3.x (including multi-key variants such as RPA‑3.2), RPA‑2.0 and RPA‑1.0 (`.rpi`). |
+| **Decompiler** | Turns compiled `.rpyc` scripts back into readable `.rpy`. It reads loose files and scripts inside archives, with a live preview and batch export. |
+| **Save editor** | Finds every save on the machine and opens the most recent one with one click. Shows the screenshot and save name, browses all variables as a tree (including nested objects, lists and dicts), and edits values. |
+| **Persistent editor** | Edits `persistent` data such as gallery and ending unlocks, or seen-text flags. |
+| **Save signing** | Ren'Py 8.1+ signs saves and persistent data. Edited files are re-signed with **your own** local key, so the game accepts them without warnings. |
+| **Developer patch** | One click enables developer mode, the console (Shift+O), always-allowed skipping and rollback. Removing it is just as easy. |
+| **CLI** | Every feature is scriptable from the command line. |
+
+## Requirements
+
+- Python **3.8 or newer**, from [python.org](https://www.python.org/downloads/).
+- Tkinter for the GUI. It is included with the python.org installers for Windows and macOS. On Debian/Ubuntu: `sudo apt install python3-tk`.
+
+## Getting started
+
+```bash
+git clone https://github.com/<your-name>/renpy-suite.git
+cd renpy-suite
+python -m renpy_suite
+```
+
+On Windows you can also double-click **`RenPySuite.pyw`** to start the GUI without a console window.
+
+Then click **Choose game folder…** and select the folder that contains the game's `.exe` (or its `game` folder).
+
+## Using the GUI
+
+### Game
+Shows what was detected about the game. The **Developer patch** section writes a small file,
+`game/zz_renpy_suite_patch.rpy`, that enables the selected options the next time the game starts:
+
+| Option | Effect |
+|--------|--------|
+| Developer mode | `config.developer = True`: Shift+D developer menu, Shift+R reload, Shift+I style inspector |
+| Developer console | `config.console = True`: Shift+O opens a Python console inside the game |
+| Always allow skipping | `config.allow_skipping` / `config.fast_skipping` |
+| Rollback | `config.rollback_enabled` with a long rollback history |
+
+**Remove patch** deletes the file and its compiled `.rpyc` again.
+
+### Archives
+All archives of the selected game are listed on the left, and you can add others with **Add…**.
+Select an archive to see its contents, filter by name, then use **Extract selected files** or **Extract all archives**.
+
+By default, files are extracted to `<game folder>/extracted/<archive name>`, **outside** the game's own
+`game` directory. Extracting scripts into `game/` would make Ren'Py load them twice and break the game.
+
+**Create archive from folder…** packs any folder into an RPA‑3.0 archive that Ren'Py can load.
+
+### Decompiler
+Lists every compiled script, both loose files and those inside archives. Click one to preview the decompiled
+source. **Decompile all** writes `.rpy` files to `<game folder>/decompiled`, keeping the folder structure.
+
+### Save Editor
+1. Click **Open latest save**, or pick any save from the list. Without a game selected, saves of *all*
+   Ren'Py games on the computer are listed.
+2. Use the filter to find a variable (e.g. `money`, `affection`). Ren'Py's internal `_…` variables are hidden by default.
+3. Double-click a value to edit it. Text, numbers, `True`/`False` and `None` can be edited directly. Expand
+   lists, dicts and objects to edit what is inside them.
+   To enter any Python literal (or change a value's type), start with `=`, e.g. `=[1, 2, 3]` or `="text"`.
+4. Click **Save changes**. A timestamped backup (`<file>.<date>-<time>.bak`) is created next to the original.
+
+**Persistent data** opens the game's `persistent` file in the same editor.
+
+> **Close the game first.** Ren'Py rewrites its persistent data when it quits and would overwrite your changes.
+
+## Command line
+
+Run `python -m renpy_suite <command> --help` for all options.
+
+```bash
+python -m renpy_suite                       # start the GUI
+python -m renpy_suite gui "C:/Games/MyGame" # start the GUI with a game opened
+
+python -m renpy_suite info "C:/Games/MyGame"
+
+python -m renpy_suite list   game/images.rpa
+python -m renpy_suite unpack game/*.rpa                 # -> <game>/extracted/<archive>
+python -m renpy_suite unpack game/images.rpa -o out/
+python -m renpy_suite pack   my_mod_folder/ my_mod.rpa
+
+python -m renpy_suite decompile "C:/Games/MyGame"       # whole game, incl. archives
+python -m renpy_suite decompile script.rpyc -o out/ --overwrite
+
+python -m renpy_suite saves "C:/Games/MyGame" --latest  # path of the newest save
+python -m renpy_suite show  path/to/1-1-LT1.save --filter money
+python -m renpy_suite set   path/to/1-1-LT1.save money 99999
+python -m renpy_suite set   path/to/persistent gallery_unlocked true
+
+python -m renpy_suite devmode "C:/Games/MyGame" --options developer,console,skipping,rollback
+python -m renpy_suite devmode "C:/Games/MyGame" --disable
+```
+
+Use `--lang en` or `--lang de` (or the `RENPY_SUITE_LANG` environment variable) to override the interface language.
+
+## Where saves are stored
+
+Ren'Py keeps saves in two places and syncs between them:
+
+| Platform | Location |
+|----------|----------|
+| All | `<game folder>/game/saves/` |
+| Windows | `%APPDATA%\RenPy\<save directory>\` |
+| macOS | `~/Library/RenPy/<save directory>/` |
+| Linux | `~/.renpy/<save directory>/` |
+
+`<save directory>` is the game's `config.save_directory`. RenPy Suite reads it from the game's scripts,
+including compiled and archived ones.
+
+## Safety
+
+- **No code execution.** Ren'Py data files are Python pickles, which can run arbitrary code when loaded the normal way.
+  RenPy Suite uses its own unpickler. It never imports or calls anything from a file. Every referenced class
+  becomes an inert placeholder that records its data so it can be written back unchanged. You can open saves
+  from strangers safely.
+- **Backups.** Every save or persistent write first copies the original to a timestamped `.bak` file.
+- **Your own key only.** Re-signing uses the signing key that Ren'Py already created on *your* computer
+  (`<RenPy dir>/tokens/security_keys.txt`). RenPy Suite never creates, exports or changes keys. If no key is
+  found, you are warned before saving.
+- **The game folder is left alone.** Extraction and decompilation go to separate folders. The only file
+  written into `game/` is the optional developer patch.
+
+## Supported formats
+
+| Format | Versions |
+|--------|----------|
+| Archives | RPA‑1.0 (`.rpi` + `.rpa`), RPA‑2.0, RPA‑3.0, RPA‑3.x with multiple key fields |
+| Compiled scripts | `RENPY RPC2` (Ren'Py 6.18 – 8.x) and legacy zlib `.rpyc` |
+| Saves | Ren'Py 6 – 8 (`.save` zip with pickled log), signed or unsigned |
+| Persistent | zlib-compressed pickle, signed or unsigned |
+| Games | Python 2 (Ren'Py ≤ 7) and Python 3 (Ren'Py 8) |
+
+## Limitations
+
+- **The decompiler is best-effort.** It covers labels, dialogue, menus, control flow, Python blocks,
+  define/default, images, show/scene/hide with ATL, transforms, styles, translations, user statements and
+  screen language (SL2). It does not preserve comments, formatting or line numbers. Anything it doesn't
+  understand is kept as a `# [renpy-suite] …` comment instead of being dropped. Legacy (pre-SL2) screens are
+  not decompiled.
+- **Obfuscated games are not supported.** Some games deliberately encrypt or alter their archives or scripts.
+  These are not handled.
+- **Python 2 games.** Strings from Python 2 games are kept as raw bytes, so they are written back exactly. In
+  the editor they show the type `bytes`, and new text is stored as UTF‑8.
+- If a signed save is edited on a computer without a Ren'Py signing key, the game asks once whether you trust
+  the file. Answer *Yes*. Edited **persistent** data cannot be loaded at all in that case.
+
+## Project layout
+
+```
+renpy_suite/
+  rpa.py          archive reading / writing
+  rpyc.py         .rpyc decompiler
+  saves.py        save + persistent files
+  savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
+  stubpickle.py   safe, round-trip capable unpickler
+  values.py       browsing / editing unpickled values
+  game.py         game detection, developer patch
+  locations.py    platform save locations
+  i18n.py         UI translations
+  cli.py          command-line interface
+  gui/            Tkinter user interface
+tests/            unit and end-to-end tests (stdlib unittest)
+RenPySuite.pyw    double-click launcher
+```
+
+## Development
+
+```bash
+python -m unittest discover -s tests
+```
+
+The tests build realistic fixtures (archives, compiled scripts, signed saves) from look-alike Ren'Py
+classes, so Ren'Py itself is not needed.
+
+### Adding a language
+Open `renpy_suite/i18n.py`, copy the `"en"` block, translate the values and add it under the language's
+two-letter code (e.g. `"fr"`). The tests check that every language has all keys and placeholders.
+
+## Disclaimer
+
+RenPy Suite is meant for personal modding, translation, accessibility, learning and recovering your own
+data. Respect the licenses and terms of the games you open, and don't redistribute other people's
+assets without permission. This project is not affiliated with or endorsed by the Ren'Py project.
+
+## License
+
+[MIT](LICENSE)

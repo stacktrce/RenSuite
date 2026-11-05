@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*.bak
+extracted/
+decompiled/
+*_extracted/
+.venv/
