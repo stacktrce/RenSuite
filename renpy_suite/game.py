@@ -75,6 +75,11 @@ class GameInfo:
     def script_sources(self, include_archives=True) -> list:
         """``[(display_name, read_bytes)]`` for every .rpyc, loose or archived."""
         out = [(str(p.relative_to(self.game_dir)).replace("\\", "/"), p.read_bytes) for p in self.rpyc_files]
+        compiled = {p.with_suffix("") for p in self.rpyc_files}
+        out += [(str(p.relative_to(self.game_dir)).replace("\\", "/"), p.read_bytes)
+                for p in self.rpy_files
+                if p.with_suffix("") not in compiled and p.name != PATCH_FILE
+                and live.LIVE_DIR not in p.parts and "renpy_suite_mods" not in p.parts]
         if include_archives:
             for archive_path in self.archives:
                 try:

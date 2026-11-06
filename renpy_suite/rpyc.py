@@ -83,7 +83,8 @@ def decompile_many(sources, out_dir, overwrite=False, progress=None, cancel=None
             skipped += 1
             continue
         try:
-            text = decompile(read(), name)
+            data = read()
+            text = data.decode("utf-8-sig", "replace") if name.endswith(".rpy") else decompile(data, name)
         except Exception as exc:
             errors.append((name, str(exc)))
             continue

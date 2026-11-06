@@ -99,6 +99,8 @@ class SuiteApp:
         self.status.pack(fill=tk.X)
 
         root.bind("<Control-o>", lambda e: self.choose_game())
+        scripts_tab = next(tab for tab, key in self.tabs if key == "tab_decompiler")
+        root.bind("<Control-F>", lambda e: scripts_tab.open_search())  # Ctrl+Shift+F
         root.bind("<F5>", lambda e: self.reload_game())
         if self.game is not None:
             for tab, _ in self.tabs:

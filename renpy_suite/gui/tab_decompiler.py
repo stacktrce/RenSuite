@@ -11,6 +11,8 @@ from ..game import default_decompile_dir
 from ..i18n import t
 from ..live import LiveGame
 from ..scriptedit import ScriptEditor
+from ..search import ScriptIndex
+from .search_window import SearchWindow
 from .widgets import ProgressPanel, open_path, scrolled
 from .theme import c
 
@@ -41,6 +43,9 @@ class DecompilerTab(ttk.Frame):
         ttk.Checkbutton(left, text=t("include_archived"), variable=self.include_archived,
                         command=self.reload_sources).pack(anchor="w", pady=(6, 0))
         ttk.Button(left, text=t("add_rpyc"), command=self.add_files).pack(anchor="w", pady=(4, 0))
+        ttk.Button(left, text=t("search_all"), command=self.open_search).pack(anchor="w", pady=(4, 0))
+        self.search_window = None
+        self.index = None
         panes.add(left, weight=1)
 
         right = ttk.LabelFrame(panes, text=t("editor_frame"), padding=6)
@@ -174,6 +179,39 @@ class DecompilerTab(ttk.Frame):
             self.edit_status.config(text=t("status_edited"), foreground=c("green"))
         else:
             self.edit_status.config(text=t("status_original"), foreground=c("gray"))
+
+    def open_search(self):
+        if self.game is None:
+            messagebox.showinfo(t("app_title"), t("need_game"))
+            return
+        if self.index is None or self.index.game is not self.game:
+            self.index = ScriptIndex(self.game)
+        if self.search_window is not None and self.search_window.winfo_exists():
+            self.search_window.lift()
+            self.search_window.entry.focus_set()
+            return
+        self.search_window = SearchWindow(self)
+
+    def open_at(self, display_name: str, line: int):
+        """Show ``display_name`` in the editor and highlight ``line``."""
+        index = next((i for i, (name, _) in enumerate(self.sources) if name == display_name), None)
+        if index is None:
+            return
+        self.app.notebook.select(self)
+        if self.filter_var.get():
+            self.filter_var.set("")
+        if index != self.current:
+            self.tree.selection_set(str(index))
+            self.tree.see(str(index))
+            self.update_idletasks()
+            self.preview_selected()
+        if self.current != index:
+            return  # the user kept unsaved changes in another script
+        self.text.tag_remove("found", "1.0", tk.END)
+        self.text.tag_add("found", "%d.0" % line, "%d.end" % line)
+        self.text.mark_set("insert", "%d.0" % line)
+        self.text.see("%d.0" % line)
+        self.text.focus_set()
 
     def find_next(self):
         needle = self.find_var.get()

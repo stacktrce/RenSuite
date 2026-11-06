@@ -119,8 +119,10 @@ By default, files are extracted to `<game folder>/extracted/<archive name>`, **o
 **Create archive from folder…** packs any folder into an RPA‑3.0 archive that Ren'Py can load.
 
 ### Scripts (decompiler & editor)
-Lists every compiled script, both loose files and those inside archives. Click one to open its decompiled
-source in the editor. Use **Find** (Ctrl+F) to jump to what you're looking for.
+Lists every script: compiled `.rpyc` (loose or inside archives) and plain `.rpy`. Click one to open its
+(decompiled) source in the editor. Use **Find** (Ctrl+F) to search the open script, or **Search all
+scripts…** (Ctrl+Shift+F) to search every script of the game at once, e.g. where `affection` is changed.
+Plain text and regular expressions are supported. Double-click a result to jump to the line in the editor.
 
 To change the game, edit the code (for example `default unlocked_all = False` → `True`) and press
 **Save to game** (Ctrl+S). The game uses your version the next time it starts. With the
@@ -291,6 +293,7 @@ renpy_suite/
   live.py         live connection to a running game (in-game bridge + client)
   mods.py         mod format, mod library, installer and cheats
   scan.py         Cheat-Engine style value search over snapshots
+  search.py       full-text search over all scripts
   saves.py        save + persistent files
   savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
   stubpickle.py   safe, round-trip capable unpickler
