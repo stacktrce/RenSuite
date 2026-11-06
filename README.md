@@ -59,7 +59,8 @@ GitHub page, **About**).
 
 ### Settings
 **File → Settings…** lets you choose the **language** (system default, English or Deutsch) and the **theme**
-(system default, light or dark). Changes apply immediately. Settings are stored in
+(system default, light or dark). Changes apply immediately. **Save archive files to** sets the folder used
+by right-click → *Save to …* in the Archives tab. Leave it empty to be asked every time. Settings are stored in
 `%APPDATA%\RenPySuite\settings.json` (Windows), `~/Library/Application Support/RenPySuite/` (macOS) or
 `~/.config/renpy-suite/` (Linux).
 
@@ -99,6 +100,14 @@ the folder.
 ### Archives
 All archives of the selected game are listed on the left, and you can add others with **Add…**.
 Select an archive to see its contents, filter by name, then use **Extract selected files** or **Extract all archives**.
+
+To grab just a few files, such as a single image:
+
+- **Double-click** a file to open it in your default app (images, audio, video, text, fonts).
+- **Right-click** → **Save as…** to pick a location, or **Save to “…”** to save straight into the folder
+  set in the settings. **Ctrl+S** does the same for the selection. Files are saved by name, and an existing
+  file is never overwritten: a second `bg.png` becomes `bg (2).png`.
+- **Copy name** copies the archive path, e.g. for use in a mod script.
 
 By default, files are extracted to `<game folder>/extracted/<archive name>`, **outside** the game's own
 `game` directory. Extracting scripts into `game/` would make Ren'Py load them twice and break the game.

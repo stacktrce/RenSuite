@@ -10,6 +10,7 @@ from pathlib import Path
 DEFAULTS = {
     "language": "system",  # "system" or a language code from i18n.STRINGS
     "theme": "system",     # "system", "light" or "dark"
+    "export_dir": "",      # where single archive files are saved; empty = ask every time
 }
 
 

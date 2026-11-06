@@ -69,6 +69,22 @@ class RPATest(TmpDirTest):
                             [("x.txt", b"hello", b"")], key=k1 ^ k2)
         self.assertEqual(rpa.RPAArchive(path).read("x.txt"), b"hello")
 
+    def test_save_members_flat_without_overwriting(self):
+        src = self.tmp / "src"
+        (src / "images" / "a").mkdir(parents=True)
+        (src / "images" / "b").mkdir(parents=True)
+        (src / "images" / "a" / "bg.png").write_bytes(b"A")
+        (src / "images" / "b" / "bg.png").write_bytes(b"B")
+        rpa.pack(src, self.tmp / "images.rpa")
+        archive = rpa.RPAArchive(self.tmp / "images.rpa")
+        out = self.tmp / "out"
+        out.mkdir()
+        (out / "bg.png").write_bytes(b"existing")
+        written = rpa.save_members(archive, ["images/a/bg.png", "images/b/bg.png"], out)
+        self.assertEqual([p.name for p in written], ["bg (2).png", "bg (3).png"])
+        self.assertEqual((out / "bg.png").read_bytes(), b"existing")
+        self.assertEqual((out / "bg (3).png").read_bytes(), b"B")
+
     def test_default_output_outside_game_dir(self):
         p = self.tmp / "MyGame" / "game" / "images.rpa"
         self.assertEqual(rpa.default_output_dir(p), (self.tmp / "MyGame" / "extracted" / "images").resolve())

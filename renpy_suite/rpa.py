@@ -171,6 +171,34 @@ class RPAArchive:
         return done
 
 
+def unique_path(folder, filename: str) -> Path:
+    """``folder/filename``, or ``folder/name (2).ext`` … if that already exists."""
+    folder = Path(folder)
+    target = folder / filename
+    stem, suffix = Path(filename).stem, Path(filename).suffix
+    n = 2
+    while target.exists():
+        target = folder / ("%s (%d)%s" % (stem, n, suffix))
+        n += 1
+    return target
+
+
+def save_members(archive: "RPAArchive", names, folder) -> list:
+    """Save archive members by their file name only (no sub-folders) into ``folder``.
+
+    Existing files are never overwritten. Returns the written paths.
+    """
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    written = []
+    with open(archive.path, "rb") as f:
+        for name in names:
+            target = unique_path(folder, safe_relpath(name).name)
+            target.write_bytes(archive._read(f, name))
+            written.append(target)
+    return written
+
+
 def pack(source_dir, archive_path, progress=None, cancel=None) -> int:
     """Create an RPA-3.0 archive from every file below ``source_dir``."""
     source_dir = Path(source_dir)

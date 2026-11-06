@@ -5,7 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 import webbrowser
 from pathlib import Path
-from tkinter import ttk
+from tkinter import filedialog, ttk
 
 from .. import __url__, __version__, i18n
 from ..i18n import t
@@ -69,24 +69,40 @@ class SettingsDialog(_Dialog):
         self.theme.current(self.THEMES.index(settings["theme"]) if settings["theme"] in self.THEMES else 0)
         self.theme.grid(row=1, column=1, sticky="ew", padx=(12, 0), pady=4)
 
-        ttk.Label(self.body, text=t("settings_folder")).grid(row=2, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(self.body, text=t("settings_export")).grid(row=2, column=0, sticky="w", pady=(12, 0))
+        export_row = ttk.Frame(self.body)
+        export_row.grid(row=2, column=1, sticky="ew", padx=(12, 0), pady=(12, 0))
+        self.export_var = tk.StringVar(value=settings.get("export_dir", ""))
+        ttk.Entry(export_row, textvariable=self.export_var, width=34).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(export_row, text=t("browse"), command=self.browse_export).pack(side=tk.LEFT, padx=(6, 0))
+        ttk.Label(self.body, text=t("settings_export_hint"), foreground=c("gray")).grid(
+            row=3, column=1, sticky="w", padx=(12, 0))
+
+        ttk.Label(self.body, text=t("settings_folder")).grid(row=4, column=0, sticky="w", pady=(12, 4))
         folder = settings.path.parent
         link = ttk.Label(self.body, text=str(folder), foreground=c("accent"), cursor="hand2")
-        link.grid(row=2, column=1, sticky="w", padx=(12, 0), pady=(12, 4))
+        link.grid(row=4, column=1, sticky="w", padx=(12, 0), pady=(12, 4))
         link.bind("<Button-1>", lambda e: (folder.mkdir(parents=True, exist_ok=True), open_path(folder)))
 
         buttons = ttk.Frame(self.body)
-        buttons.grid(row=3, column=0, columnspan=2, sticky="e", pady=(16, 0))
+        buttons.grid(row=5, column=0, columnspan=2, sticky="e", pady=(16, 0))
         ttk.Button(buttons, text=t("ok"), command=self.accept).pack(side=tk.LEFT)
         ttk.Button(buttons, text=t("cancel"), command=self.destroy).pack(side=tk.LEFT, padx=(6, 0))
         self.bind("<Return>", lambda e: self.accept())
         self.show()
+
+    def browse_export(self):
+        folder = filedialog.askdirectory(parent=self, title=t("settings_export"),
+                                         initialdir=self.export_var.get() or None)
+        if folder:
+            self.export_var.set(folder)
 
     def accept(self):
         settings = self.app.settings
         new = {"language": self.lang_codes[self.lang.current()], "theme": self.THEMES[self.theme.current()]}
         changed = any(settings[k] != v for k, v in new.items())
         settings.update(new)
+        settings["export_dir"] = self.export_var.get().strip()
         try:
             settings.save()
         except OSError:

@@ -2,14 +2,25 @@
 
 from __future__ import annotations
 
+import sys
+import tempfile
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from .. import rpa
 from ..i18n import t
-from .widgets import ProgressPanel, human_size, open_path, scrolled
 from .theme import c
+from .widgets import ProgressPanel, human_size, open_path, scrolled
+
+# Opened with the system's default app on double-click. Anything else (scripts, executables …)
+# must be saved first, so a crafted archive can't launch something by accident.
+SAFE_TO_OPEN = {
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif",
+    ".ogg", ".mp3", ".wav", ".opus", ".flac", ".m4a",
+    ".mp4", ".webm", ".ogv", ".mkv", ".avi",
+    ".txt", ".json", ".csv", ".md", ".rpy", ".ttf", ".otf",
+}
 
 
 class ArchivesTab(ttk.Frame):
@@ -49,7 +60,16 @@ class ArchivesTab(ttk.Frame):
         self.tree.column("#0", width=420)
         self.tree.column("size", width=90, anchor="e", stretch=False)
         frame.pack(fill=tk.BOTH, expand=True)
+        self.tree.bind("<Button-3>", self.context_menu)
+        if sys.platform == "darwin":
+            self.tree.bind("<Button-2>", self.context_menu)
+            self.tree.bind("<Control-Button-1>", self.context_menu)
+        self.tree.bind("<Double-1>", lambda e: self.open_member())
+        self.tree.bind("<Return>", lambda e: self.open_member())
+        self.tree.bind("<Control-s>", lambda e: self.quick_save())
+        ttk.Label(right, text=t("contents_hint"), foreground=c("gray")).pack(anchor="w", pady=(4, 0))
         panes.add(right, weight=3)
+        self.last_save_dir = None
 
         out = ttk.LabelFrame(self, text=t("output_frame"), padding=6)
         out.pack(fill=tk.X, pady=(8, 0))
@@ -127,6 +147,103 @@ class ArchivesTab(ttk.Frame):
             self.tree.insert("", tk.END, iid=name, text=name, values=(human_size(size),))
         self.summary.config(text=t("archive_summary", version=self.archive.version,
                                    count=len(self.archive.index), size=human_size(total)))
+
+    # -- single files ------------------------------------------------------
+
+    def export_dir(self):
+        folder = self.app.settings.get("export_dir", "")
+        return Path(folder) if folder else None
+
+    def context_menu(self, event):
+        iid = self.tree.identify_row(event.y)
+        if not iid or self.archive is None:
+            return
+        if iid not in self.tree.selection():
+            self.tree.selection_set(iid)
+        names = list(self.tree.selection())
+        menu = tk.Menu(self, tearoff=False)
+        if len(names) == 1:
+            menu.add_command(label=t("ctx_open"), command=self.open_member)
+            menu.add_separator()
+        menu.add_command(label=t("ctx_save_as"), command=self.save_as)
+        export = self.export_dir()
+        if export is not None:
+            menu.add_command(label=t("ctx_save_to", folder=export.name or str(export)), accelerator="Ctrl+S",
+                             command=lambda: self.save_to(export, names))
+        menu.add_separator()
+        menu.add_command(label=t("ctx_copy_name"), command=lambda: self.copy_names(names))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def quick_save(self):
+        names = list(self.tree.selection())
+        if not names or self.archive is None:
+            return "break"
+        export = self.export_dir()
+        if export is not None:
+            self.save_to(export, names)
+        else:
+            self.save_as()
+        return "break"
+
+    def save_as(self):
+        names = list(self.tree.selection())
+        if not names or self.archive is None:
+            return
+        start = str(self.last_save_dir or self.export_dir() or "") or None
+        if len(names) == 1:
+            name = Path(names[0])
+            suffix = name.suffix or ""
+            target = filedialog.asksaveasfilename(
+                title=t("ctx_save_as"), initialdir=start, initialfile=name.name, defaultextension=suffix,
+                filetypes=([(suffix.lstrip(".").upper(), "*" + suffix)] if suffix else []) + [(t("filetype_all"), "*.*")])
+            if not target:
+                return
+            target = Path(target)
+            try:
+                target.write_bytes(self.archive.read(names[0]))
+            except OSError as exc:
+                messagebox.showerror(t("error"), str(exc))
+                return
+            self.last_save_dir = target.parent
+            self.app.set_status(t("files_saved", count=1, path=target), "green")
+        else:
+            folder = filedialog.askdirectory(title=t("pick_export_dir"), initialdir=start)
+            if folder:
+                self.save_to(Path(folder), names)
+
+    def save_to(self, folder: Path, names):
+        try:
+            written = rpa.save_members(self.archive, names, folder)
+        except (OSError, rpa.RPAError) as exc:
+            messagebox.showerror(t("error"), str(exc))
+            return
+        self.last_save_dir = folder
+        self.last_output = folder
+        shown = written[0] if len(written) == 1 else folder
+        self.app.set_status(t("files_saved", count=len(written), path=shown), "green")
+
+    def open_member(self):
+        names = list(self.tree.selection())
+        if len(names) != 1 or self.archive is None:
+            return
+        name = names[0]
+        if Path(name).suffix.lower() not in SAFE_TO_OPEN:
+            messagebox.showinfo(t("app_title"), t("open_blocked"))
+            return
+        target = Path(tempfile.gettempdir()) / "renpy_suite_preview" / self.archive.path.stem / rpa.safe_relpath(name)
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(self.archive.read(name))
+            open_path(target)
+        except OSError as exc:
+            messagebox.showerror(t("error"), str(exc))
+
+    def copy_names(self, names):
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(names))
 
     def browse_output(self):
         d = filedialog.askdirectory(title=t("output_frame").strip())
