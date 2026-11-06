@@ -107,6 +107,8 @@ Select an archive to see its contents, filter by name, then use **Extract select
 
 To grab just a few files, such as a single image:
 
+- **Click** a PNG or GIF to see a preview with its size next to the list. Other formats such as JPG and WebP
+  have no built-in preview, because that would need an extra library.
 - **Double-click** a file to open it in your default app (images, audio, video, text, fonts).
 - **Right-click** → **Save as…** to pick a location, or **Save to “…”** to save straight into the folder
   set in the settings. **Ctrl+S** does the same for the selection. Files are saved by name, and an existing

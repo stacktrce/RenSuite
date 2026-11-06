@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import math
 import sys
 import tempfile
 import tkinter as tk
@@ -21,6 +23,9 @@ SAFE_TO_OPEN = {
     ".mp4", ".webm", ".ogv", ".mkv", ".avi",
     ".txt", ".json", ".csv", ".md", ".rpy", ".ttf", ".otf",
 }
+# Tk can decode these without extra libraries; JPG/WebP need Pillow, which we don't depend on.
+PREVIEWABLE = {".png", ".gif"}
+PREVIEW_MAX_BYTES = 25 * 1024 * 1024
 
 
 class ArchivesTab(ttk.Frame):
@@ -54,12 +59,23 @@ class ArchivesTab(ttk.Frame):
         ttk.Entry(frow, textvariable=self.filter_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
         self.summary = ttk.Label(frow, text="", foreground=c("gray"))
         self.summary.pack(side=tk.RIGHT)
-        frame, self.tree = scrolled(right, ttk.Treeview, columns=("size",), selectmode="extended", height=6)
+        inner = ttk.PanedWindow(right, orient=tk.HORIZONTAL)
+        inner.pack(fill=tk.BOTH, expand=True)
+        frame, self.tree = scrolled(inner, ttk.Treeview, columns=("size",), selectmode="extended", height=6)
         self.tree.heading("#0", text=t("col_name"))
         self.tree.heading("size", text=t("col_size"))
-        self.tree.column("#0", width=420)
-        self.tree.column("size", width=90, anchor="e", stretch=False)
-        frame.pack(fill=tk.BOTH, expand=True)
+        self.tree.column("#0", width=300)
+        self.tree.column("size", width=80, anchor="e", stretch=False)
+        inner.add(frame, weight=3)
+        preview = ttk.Frame(inner, padding=(8, 0, 0, 0))
+        self.preview_image = ttk.Label(preview, anchor="center")
+        self.preview_image.pack(fill=tk.BOTH, expand=True)
+        self.preview_info = ttk.Label(preview, text=t("preview_none"), foreground=c("gray"),
+                                      wraplength=260, justify=tk.CENTER, anchor="center")
+        self.preview_info.pack(fill=tk.X, pady=(4, 0))
+        inner.add(preview, weight=2)
+        self.photo = None
+        self.tree.bind("<<TreeviewSelect>>", lambda e: self.update_preview())
         self.tree.bind("<Button-3>", self.context_menu)
         if sys.platform == "darwin":
             self.tree.bind("<Button-2>", self.context_menu)
@@ -147,6 +163,37 @@ class ArchivesTab(ttk.Frame):
             self.tree.insert("", tk.END, iid=name, text=name, values=(human_size(size),))
         self.summary.config(text=t("archive_summary", version=self.archive.version,
                                    count=len(self.archive.index), size=human_size(total)))
+
+    # -- preview -------------------------------------------------------------
+
+    def update_preview(self):
+        sel = self.tree.selection()
+        self.photo = None
+        self.preview_image.config(image="")
+        if len(sel) != 1 or self.archive is None:
+            self.preview_info.config(text=t("preview_none"))
+            return
+        name = sel[0]
+        size = self.archive.size(name)
+        suffix = Path(name).suffix.lower()
+        if suffix not in PREVIEWABLE or size > PREVIEW_MAX_BYTES:
+            key = "preview_too_big" if suffix in PREVIEWABLE else "preview_unsupported"
+            self.preview_info.config(text="%s\n%s\n%s" % (Path(name).name, human_size(size),
+                                                         t(key, ext=suffix.upper().lstrip(".") or "?")))
+            return
+        try:
+            img = tk.PhotoImage(data=base64.b64encode(self.archive.read(name)).decode("ascii"))
+        except (tk.TclError, OSError):
+            self.preview_info.config(text="%s\n%s" % (Path(name).name, t("preview_failed_image")))
+            return
+        width, height = img.width(), img.height()
+        box_w = max(self.preview_image.winfo_width(), 200)
+        box_h = max(self.preview_image.winfo_height(), 200)
+        factor = max(1, math.ceil(width / box_w), math.ceil(height / box_h))
+        self.photo = img.subsample(factor, factor) if factor > 1 else img
+        self.preview_image.config(image=self.photo)
+        self.preview_info.config(text="%s\n%s" % (Path(name).name,
+                                                  t("preview_info", w=width, h=height, size=human_size(size))))
 
     # -- single files ------------------------------------------------------
 
