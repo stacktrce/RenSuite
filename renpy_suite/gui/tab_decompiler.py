@@ -12,6 +12,7 @@ from ..i18n import t
 from ..live import LiveGame
 from ..scriptedit import ScriptEditor
 from .widgets import ProgressPanel, open_path, scrolled
+from .theme import c
 
 
 class DecompilerTab(ttk.Frame):
@@ -51,13 +52,13 @@ class DecompilerTab(ttk.Frame):
         find_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
         find_entry.bind("<Return>", lambda e: self.find_next())
         ttk.Button(find, text=t("find_next"), command=self.find_next).pack(side=tk.LEFT)
-        self.edit_status = ttk.Label(find, text="", foreground="gray")
+        self.edit_status = ttk.Label(find, text="", foreground=c("gray"))
         self.edit_status.pack(side=tk.RIGHT, padx=(12, 0))
 
         frame, self.text = scrolled(right, tk.Text, wrap="none", font=("Consolas", 10), undo=True,
                                     height=8, width=60)
         frame.pack(fill=tk.BOTH, expand=True)
-        self.text.tag_configure("found", background="#ffe58a")
+        self.text.tag_configure("found", background=c("highlight"))
         self.text.bind("<<Modified>>", lambda e: self.update_edit_status())
         self.text.bind("<Control-s>", lambda e: (self.save_to_game(), "break")[1])
         self.text.bind("<Control-f>", lambda e: (find_entry.focus_set(), "break")[1])
@@ -69,7 +70,7 @@ class DecompilerTab(ttk.Frame):
         ttk.Button(erow, text=t("save_preview"), command=self.save_preview).pack(side=tk.RIGHT)
         self.reload_after_save = tk.BooleanVar(value=True)
         ttk.Checkbutton(right, text=t("reload_after_save"), variable=self.reload_after_save).pack(anchor="w", pady=(4, 0))
-        ttk.Label(right, text=t("editor_hint"), foreground="gray", wraplength=640,
+        ttk.Label(right, text=t("editor_hint"), foreground=c("gray"), wraplength=640,
                   justify=tk.LEFT).pack(anchor="w", pady=(4, 0))
         panes.add(right, weight=3)
         self.editor = None
@@ -85,7 +86,7 @@ class DecompilerTab(ttk.Frame):
         ttk.Button(orow, text=t("browse"), command=self.browse_output).pack(side=tk.LEFT, padx=6)
         self.overwrite = tk.BooleanVar(value=False)
         ttk.Checkbutton(out, text=t("overwrite"), variable=self.overwrite).pack(anchor="w", pady=(4, 0))
-        ttk.Label(out, text=t("output_hint_decompile"), foreground="gray").pack(anchor="w")
+        ttk.Label(out, text=t("output_hint_decompile"), foreground=c("gray")).pack(anchor="w")
 
         actions = ttk.Frame(self)
         actions.pack(fill=tk.X, pady=(8, 0))
@@ -168,11 +169,11 @@ class DecompilerTab(ttk.Frame):
         if self.current is None:
             self.edit_status.config(text="")
         elif self.text.edit_modified():
-            self.edit_status.config(text=t("status_unsaved"), foreground="orange")
+            self.edit_status.config(text=t("status_unsaved"), foreground=c("orange"))
         elif self.editor is not None and self.editor.is_edited(self.sources[self.current][0]):
-            self.edit_status.config(text=t("status_edited"), foreground="green")
+            self.edit_status.config(text=t("status_edited"), foreground=c("green"))
         else:
-            self.edit_status.config(text=t("status_original"), foreground="gray")
+            self.edit_status.config(text=t("status_original"), foreground=c("gray"))
 
     def find_next(self):
         needle = self.find_var.get()

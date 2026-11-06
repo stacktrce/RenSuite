@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 from .. import rpa
 from ..i18n import t
 from .widgets import ProgressPanel, human_size, open_path, scrolled
+from .theme import c
 
 
 class ArchivesTab(ttk.Frame):
@@ -40,7 +41,7 @@ class ArchivesTab(ttk.Frame):
         self.filter_var = tk.StringVar()
         self.filter_var.trace_add("write", lambda *a: self.fill_contents())
         ttk.Entry(frow, textvariable=self.filter_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
-        self.summary = ttk.Label(frow, text="", foreground="gray")
+        self.summary = ttk.Label(frow, text="", foreground=c("gray"))
         self.summary.pack(side=tk.RIGHT)
         frame, self.tree = scrolled(right, ttk.Treeview, columns=("size",), selectmode="extended", height=6)
         self.tree.heading("#0", text=t("col_name"))
@@ -57,7 +58,7 @@ class ArchivesTab(ttk.Frame):
         self.output_var = tk.StringVar()
         ttk.Entry(orow, textvariable=self.output_var).pack(side=tk.LEFT, fill=tk.X, expand=True)
         ttk.Button(orow, text=t("browse"), command=self.browse_output).pack(side=tk.LEFT, padx=6)
-        ttk.Label(out, text=t("output_hint_archives"), foreground="gray").pack(anchor="w", pady=(4, 0))
+        ttk.Label(out, text=t("output_hint_archives"), foreground=c("gray")).pack(anchor="w", pady=(4, 0))
 
         actions = ttk.Frame(self)
         actions.pack(fill=tk.X, pady=(8, 0))

@@ -13,6 +13,31 @@ import sys
 
 STRINGS = {
     "en": {
+        "language_name": "English",
+        "menu_file": "File",
+        "menu_mods": "Mods",
+        "menu_help": "Help",
+        "menu_settings": "Settings…",
+        "menu_exit": "Exit",
+        "menu_docs": "Documentation",
+        "menu_mod_format": "Mod format",
+        "menu_github": "GitHub page",
+        "menu_about": "About RenPy Suite",
+        "settings_title": "Settings",
+        "settings_language": "Language:",
+        "settings_theme": "Theme:",
+        "settings_folder": "Settings folder:",
+        "lang_system": "System default ({name})",
+        "theme_system": "System default",
+        "theme_light": "Light",
+        "theme_dark": "Dark",
+        "ok": "OK",
+        "close": "Close",
+        "about_title": "About RenPy Suite",
+        "about_tagline": "All-in-one toolkit for inspecting and modding Ren'Py games.",
+        "about_version": "Version {version}",
+        "about_license": "Released under the MIT License.",
+        "about_disclaimer": "Not affiliated with or endorsed by the Ren'Py project.",
         "app_title": "RenPy Suite",
         "game_label": "Game:",
         "no_game": "No game selected — choose a game folder to get started.",
@@ -168,6 +193,31 @@ STRINGS = {
         "screenshot_none": "(no screenshot)",
     },
     "de": {
+        "language_name": "Deutsch",
+        "menu_file": "Datei",
+        "menu_mods": "Mods",
+        "menu_help": "Hilfe",
+        "menu_settings": "Einstellungen…",
+        "menu_exit": "Beenden",
+        "menu_docs": "Dokumentation",
+        "menu_mod_format": "Mod-Format",
+        "menu_github": "GitHub-Seite",
+        "menu_about": "Über RenPy Suite",
+        "settings_title": "Einstellungen",
+        "settings_language": "Sprache:",
+        "settings_theme": "Design:",
+        "settings_folder": "Einstellungsordner:",
+        "lang_system": "Systemstandard ({name})",
+        "theme_system": "Systemstandard",
+        "theme_light": "Hell",
+        "theme_dark": "Dunkel",
+        "ok": "OK",
+        "close": "Schließen",
+        "about_title": "Über RenPy Suite",
+        "about_tagline": "Alles-in-einem-Werkzeug zum Untersuchen und Modden von Ren'Py-Spielen.",
+        "about_version": "Version {version}",
+        "about_license": "Veröffentlicht unter der MIT-Lizenz.",
+        "about_disclaimer": "Nicht mit dem Ren'Py-Projekt verbunden oder von ihm unterstützt.",
         "app_title": "RenPy Suite",
         "game_label": "Spiel:",
         "no_game": "Kein Spiel gewählt — wähle einen Spielordner, um loszulegen.",
@@ -351,9 +401,21 @@ _language = detect_language()
 
 
 def set_language(code: str):
+    """Switch language; ``"system"`` follows the operating system."""
     global _language
-    if code in STRINGS:
+    if code == "system":
+        _language = detect_language()
+    elif code in STRINGS:
         _language = code
+
+
+def current_language() -> str:
+    return _language
+
+
+def languages() -> list:
+    """``[(code, native name), …]`` of all available languages."""
+    return [(code, strings["language_name"]) for code, strings in STRINGS.items()]
 
 
 def t(key: str, **kwargs) -> str:

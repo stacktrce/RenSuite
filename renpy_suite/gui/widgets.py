@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from ..i18n import t
+from .theme import c
 
 
 class TaskRunner:
@@ -23,11 +24,15 @@ class TaskRunner:
         self._poll()
 
     def _poll(self):
-        try:
-            while True:
-                self._queue.get_nowait()()
-        except queue.Empty:
-            pass
+        while True:
+            try:
+                fn = self._queue.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                fn()
+            except tk.TclError:
+                pass  # the widget was destroyed meanwhile (e.g. the UI was rebuilt)
         self.root.after(40, self._poll)
 
     def call(self, fn):
@@ -56,7 +61,7 @@ class ProgressPanel(ttk.Frame):
         super().__init__(master)
         self.runner = runner
         self.cancel_event = threading.Event()
-        self.label = ttk.Label(self, text="", foreground="gray")
+        self.label = ttk.Label(self, text="", foreground=c("gray"))
         self.label.pack(fill=tk.X)
         row = ttk.Frame(self)
         row.pack(fill=tk.X, pady=(2, 0))
@@ -91,7 +96,7 @@ class ProgressPanel(ttk.Frame):
         self.set_status(text, color)
 
     def set_status(self, text, color="gray"):
-        self.label.config(text=text, foreground=color)
+        self.label.config(text=text, foreground=c(color))
 
 
 def open_path(path):

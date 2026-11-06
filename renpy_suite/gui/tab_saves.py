@@ -12,6 +12,7 @@ from .. import saves, savetoken, values
 from ..i18n import t
 from ..live import LiveDoc, LiveGame
 from .widgets import scrolled
+from .theme import c
 
 DUMMY = "__dummy__"
 
@@ -46,7 +47,7 @@ class SavesTab(ttk.Frame):
         self.save_tree.column("folder", width=160)
         frame.pack(fill=tk.BOTH, expand=True)
         self.save_tree.bind("<<TreeviewSelect>>", lambda e: self.open_selected())
-        self.scan_label = ttk.Label(left, text="", foreground="gray", wraplength=380)
+        self.scan_label = ttk.Label(left, text="", foreground=c("gray"), wraplength=380)
         self.scan_label.pack(anchor="w", pady=(6, 0))
         orow = ttk.Frame(left)
         orow.pack(fill=tk.X, pady=(6, 0))
@@ -93,7 +94,7 @@ class SavesTab(ttk.Frame):
         ttk.Button(arow, text=t("edit_value"), command=self.edit_selected).pack(side=tk.LEFT)
         ttk.Button(arow, text=t("revert"), command=self.revert).pack(side=tk.RIGHT)
         ttk.Button(arow, text=t("save_changes"), command=self.write).pack(side=tk.RIGHT, padx=6)
-        ttk.Label(right, text=t("close_game_hint"), foreground="gray").pack(anchor="w", pady=(6, 0))
+        ttk.Label(right, text=t("close_game_hint"), foreground=c("gray")).pack(anchor="w", pady=(6, 0))
         panes.add(right, weight=3)
 
         self.refresh()

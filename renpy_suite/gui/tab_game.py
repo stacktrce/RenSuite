@@ -8,6 +8,7 @@ from tkinter import messagebox, ttk
 from .. import game as gamemod
 from ..i18n import t
 from .widgets import open_path
+from .theme import c
 
 OPTION_KEYS = {
     "developer": "opt_developer",
@@ -42,7 +43,7 @@ class GameTab(ttk.Frame):
 
         patch = ttk.LabelFrame(self, text=t("patch_frame"), padding=10)
         patch.pack(fill=tk.X)
-        ttk.Label(patch, text=t("patch_intro"), foreground="gray").pack(anchor="w", pady=(0, 6))
+        ttk.Label(patch, text=t("patch_intro"), foreground=c("gray")).pack(anchor="w", pady=(0, 6))
         self.option_vars = {}
         for opt, key in OPTION_KEYS.items():
             var = tk.BooleanVar(value=opt in ("developer", "console", "live"))
@@ -52,7 +53,7 @@ class GameTab(ttk.Frame):
         row.pack(fill=tk.X, pady=(8, 0))
         ttk.Button(row, text=t("patch_apply"), command=self.apply_patch).pack(side=tk.LEFT)
         ttk.Button(row, text=t("patch_remove"), command=self.remove_patch).pack(side=tk.LEFT, padx=6)
-        self.patch_status = ttk.Label(patch, text="", foreground="gray")
+        self.patch_status = ttk.Label(patch, text="", foreground=c("gray"))
         self.patch_status.pack(anchor="w", pady=(6, 0))
 
     def can_close(self):
@@ -79,9 +80,9 @@ class GameTab(ttk.Frame):
     def update_patch_status(self):
         status = gamemod.patch_status(self.game.game_dir)
         if status:
-            self.patch_status.config(text=t("patch_installed", options=", ".join(sorted(status))), foreground="green")
+            self.patch_status.config(text=t("patch_installed", options=", ".join(sorted(status))), foreground=c("green"))
         else:
-            self.patch_status.config(text=t("patch_not_installed"), foreground="gray")
+            self.patch_status.config(text=t("patch_not_installed"), foreground=c("gray"))
 
     def _need_game(self):
         if self.game is None:

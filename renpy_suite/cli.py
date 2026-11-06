@@ -21,7 +21,7 @@ def _progress(prefix):
 
 def cmd_gui(args):
     from .gui import run
-    run(args.game)
+    run(args.game, args.lang)
 
 
 def cmd_info(args):
@@ -254,7 +254,7 @@ def main(argv=None):
         i18n.set_language(args.lang)
     if args.command is None:
         from .gui import run
-        run()
+        run(language=args.lang)
         return
     try:
         args.func(args)

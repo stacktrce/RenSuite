@@ -1,3 +1,5 @@
+<p align="center"><img src="renpy_suite/assets/icon-128.png" width="112" alt="RenPy Suite icon"></p>
+
 # RenPy Suite
 
 An all-in-one toolkit for inspecting and modding [Ren'Py](https://www.renpy.org/) games:
@@ -11,7 +13,8 @@ and switch on the developer console. It comes with a GUI and a command-line inte
 
 - **Pure Python standard library.** No `pip install` needed.
 - **Safe by design.** Ren'Py files are Python pickles, and RenPy Suite never executes code from them (see [Safety](#safety)).
-- **Multilingual UI.** The interface follows your system language. It currently ships in English and German.
+- **Multilingual UI.** It ships in English and German and follows your system language unless you pick one in the settings.
+- **Light and dark mode.** It follows the system theme or a choice in the settings, including a dark title bar on Windows.
 
 ---
 
@@ -48,6 +51,15 @@ On Windows you can also double-click **`RenPySuite.pyw`** to start the GUI witho
 Then click **Choose game folder…** and select the folder that contains the game's `.exe` (or its `game` folder).
 
 ## Using the GUI
+
+The menu bar in the top-left corner holds **File** (choose a game with Ctrl+O, reload with F5, open
+**Settings…**) and **Help** (documentation, GitHub page, **About**).
+
+### Settings
+**File → Settings…** lets you choose the **language** (system default, English or Deutsch) and the **theme**
+(system default, light or dark). Changes apply immediately. Settings are stored in
+`%APPDATA%\RenPySuite\settings.json` (Windows), `~/Library/Application Support/RenPySuite/` (macOS) or
+`~/.config/renpy-suite/` (Linux).
 
 ### Game
 Shows what was detected about the game. The **Developer patch** section writes a small file,
@@ -228,9 +240,12 @@ renpy_suite/
   game.py         game detection, developer patch
   locations.py    platform save locations
   i18n.py         UI translations
+  settings.py     persistent user settings
   cli.py          command-line interface
-  gui/            Tkinter user interface
+  gui/            Tkinter user interface (theme.py: light/dark themes)
+  assets/         application icon
 tests/            unit and end-to-end tests (stdlib unittest)
+tools/make_icon.py  draws the icon from code (original artwork, no third-party rights)
 RenPySuite.pyw    double-click launcher
 ```
 

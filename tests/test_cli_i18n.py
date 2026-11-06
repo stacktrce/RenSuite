@@ -21,7 +21,7 @@ class I18nTest(unittest.TestCase):
     def test_every_used_key_exists(self):
         used = set()
         for path in (ROOT / "renpy_suite").rglob("*.py"):
-            used |= set(re.findall(r"""\bt\(\s*["']([a-z_]+)["']""", path.read_text("utf-8")))
+            used |= set(re.findall(r"""\bt\(\s*["']([a-z_]+)["']\s*[,)]""", path.read_text("utf-8")))
             used |= set(re.findall(r""""(opt_[a-z]+|info_[a-z]+|tab_[a-z]+)\"""", path.read_text("utf-8")))
         missing = used - set(i18n.STRINGS["en"])
         self.assertFalse(missing, missing)
