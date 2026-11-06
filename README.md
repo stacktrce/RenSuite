@@ -84,6 +84,9 @@ it, RenPy Suite can:
 
 - **Change variables instantly.** In the Save Editor, click **Running game** to see the game's current
   variables. Edits take effect immediately, with no reload or save needed. To keep them, save inside the game.
+- **Freeze values**, like in Cheat Engine. Select a variable and click **Freeze / unfreeze** (or
+  **Freeze in running game** for mod cheats). The game keeps the variable at that value, even if it tries
+  to change it, until you unfreeze it. Freezes survive reloads and restarts, and are marked with ❄.
 - **Reload after saving a script.** When you save an edited script in the Scripts tab, the running game
   reloads, just like pressing Shift+R. Ren'Py saves your position, recompiles the changed script and continues
   where you were.
@@ -199,6 +202,7 @@ python -m renpy_suite devmode "C:/Games/MyGame" --disable
 python -m renpy_suite devmode "C:/Games/MyGame" --options live   # then start the game
 python -m renpy_suite live "C:/Games/MyGame" --filter affection  # show variables of the running game
 python -m renpy_suite live "C:/Games/MyGame" --set money 5000
+python -m renpy_suite live "C:/Games/MyGame" --freeze money 5000   # --unfreeze money
 python -m renpy_suite live "C:/Games/MyGame" --reload
 
 python -m renpy_suite mod-pack examples/quality-of-life qol.rsmod  # share a mod folder as one file

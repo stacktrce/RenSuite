@@ -76,7 +76,9 @@ class ModsTab(ttk.Frame):
         crow = ttk.Frame(cheats)
         crow.pack(fill=tk.X, pady=(6, 0))
         ttk.Button(crow, text=t("cheat_apply_live"), command=self.apply_live).pack(side=tk.LEFT)
-        ttk.Button(crow, text=t("cheat_apply_save"), command=self.apply_save).pack(side=tk.LEFT, padx=6)
+        ttk.Button(crow, text=t("cheat_freeze_live"),
+                   command=lambda: self.apply_live(freeze=True)).pack(side=tk.LEFT, padx=6)
+        ttk.Button(crow, text=t("cheat_apply_save"), command=self.apply_save).pack(side=tk.LEFT)
         panes.add(right, weight=3)
 
         self.refresh()
@@ -250,7 +252,7 @@ class ModsTab(ttk.Frame):
             return []
         return [self.current.cheats[int(i)] for i in self.cheat_tree.selection()]
 
-    def apply_live(self):
+    def apply_live(self, freeze=False):
         cheats = self.selected_cheats()
         if not cheats:
             messagebox.showinfo(t("app_title"), t("no_cheats_selected"))
@@ -259,11 +261,11 @@ class ModsTab(ttk.Frame):
             messagebox.showinfo(t("app_title"), t("need_game"))
             return
         try:
-            count = mods.apply_cheats_live(self.game, cheats)
+            count = mods.apply_cheats_live(self.game, cheats, freeze=freeze)
         except (mods.ModError, OSError, ValueError) as exc:
             messagebox.showinfo(t("app_title"), str(exc))
             return
-        self.app.set_status(t("cheats_applied_live", count=count), "green")
+        self.app.set_status(t("cheats_frozen_live" if freeze else "cheats_applied_live", count=count), "green")
 
     def apply_save(self):
         cheats = self.selected_cheats()

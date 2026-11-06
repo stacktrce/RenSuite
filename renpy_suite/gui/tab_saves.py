@@ -92,6 +92,7 @@ class SavesTab(ttk.Frame):
         arow = ttk.Frame(right)
         arow.pack(fill=tk.X, pady=(6, 0))
         ttk.Button(arow, text=t("edit_value"), command=self.edit_selected).pack(side=tk.LEFT)
+        ttk.Button(arow, text=t("freeze_toggle"), command=self.toggle_freeze).pack(side=tk.LEFT, padx=6)
         ttk.Button(arow, text=t("revert"), command=self.revert).pack(side=tk.RIGHT)
         ttk.Button(arow, text=t("save_changes"), command=self.write).pack(side=tk.RIGHT, padx=6)
         ttk.Label(right, text=t("close_game_hint"), foreground=c("gray")).pack(anchor="w", pady=(6, 0))
@@ -235,8 +236,40 @@ class SavesTab(ttk.Frame):
                 continue
             if needle and needle not in name.lower():
                 continue
-            type_name = self.doc.types.get(name) if isinstance(self.doc, LiveDoc) else None
+            type_name = None
+            if isinstance(self.doc, LiveDoc):
+                type_name = self.doc.types.get(name)
+                if name in self.doc.frozen:
+                    type_name = "❄ " + (type_name or "")
             self.add_node("", name, values.Ref(variables, key), value, type_name)
+
+    def toggle_freeze(self):
+        if not isinstance(self.doc, LiveDoc):
+            messagebox.showinfo(t("app_title"), t("freeze_live_only"))
+            return
+        sel = self.var_tree.selection()
+        if not sel or self.var_tree.parent(sel[0]):
+            messagebox.showinfo(t("app_title"), t("freeze_top_level"))
+            return
+        name = self.var_tree.item(sel[0], "text")
+        client = self.doc.live
+        if not client.supports_freeze():
+            messagebox.showinfo(t("app_title"), t("freeze_old_patch"))
+            return
+        try:
+            if name in self.doc.frozen:
+                client.unfreeze(name)
+                self.doc.frozen.discard(name)
+                self.app.set_status(t("unfrozen", name=name), "green")
+            else:
+                client.freeze(name, self.doc.variables[name])
+                self.doc.frozen.add(name)
+                self.app.set_status(t("frozen", name=name), "green")
+        except (OSError, ValueError) as exc:
+            messagebox.showerror(t("error"), str(exc))
+            return
+        type_name = (("❄ " if name in self.doc.frozen else "") + (self.doc.types.get(name) or ""))
+        self.var_tree.item(sel[0], values=(type_name, self.var_tree.item(sel[0], "values")[1]))
 
     def add_node(self, parent, label, ref, value, type_name=None):
         iid = self.var_tree.insert(parent, tk.END, text=label,

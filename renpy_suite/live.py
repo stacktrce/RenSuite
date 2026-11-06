@@ -90,8 +90,32 @@ BRIDGE_CODE = textwrap.dedent(r'''
             except ValueError:
                 continue
             types[name] = type(value).__name__
-        state = {"time": _rs_time.time(), "variables": variables, "types": types}
+        state = {"time": _rs_time.time(), "variables": variables, "types": types,
+                 "frozen": sorted(_rs_periodic.frozen), "bridge": 2}
         _rs_write(_rs_os.path.join(_rs_dir, "state.json"), _rs_json.dumps(state, ensure_ascii=True, sort_keys=True))
+
+    def _rs_checked(cmd):
+        """(name, plain value) if the command targets an existing plain variable, else None."""
+        name = cmd.get("name")
+        if not (isinstance(name, _rs_text) and _rs_name_re.match(name) and hasattr(renpy.store, name)):
+            return None
+        try:
+            _rs_plain(getattr(renpy.store, name))
+            return name, _rs_plain(cmd.get("value"))
+        except ValueError:
+            return None
+
+    def _rs_save_frozen():
+        _rs_write(_rs_os.path.join(_rs_dir, "frozen.json"), _rs_json.dumps(_rs_periodic.frozen, ensure_ascii=True))
+
+    def _rs_apply_frozen():
+        changed = False
+        for name, value in list(_rs_periodic.frozen.items()):
+            if hasattr(renpy.store, name) and getattr(renpy.store, name) != value:
+                setattr(renpy.store, name, _rs_revertable(value))
+                changed = True
+        if changed:
+            renpy.restart_interaction()
 
     def _rs_run_commands():
         try:
@@ -113,18 +137,21 @@ BRIDGE_CODE = textwrap.dedent(r'''
                 pass
             if not isinstance(cmd, _rs_dict):
                 continue
-            if cmd.get("op") == "set":
-                name = cmd.get("name")
-                if not (isinstance(name, _rs_text) and _rs_name_re.match(name) and hasattr(renpy.store, name)):
+            op = cmd.get("op")
+            if op in ("set", "freeze"):
+                checked = _rs_checked(cmd)
+                if checked is None:
                     continue
-                try:
-                    _rs_plain(getattr(renpy.store, name))
-                    value = _rs_revertable(_rs_plain(cmd.get("value")))
-                except ValueError:
-                    continue
-                setattr(renpy.store, name, value)
+                name, value = checked
+                setattr(renpy.store, name, _rs_revertable(value))
+                if op == "freeze":
+                    _rs_periodic.frozen[name] = value
+                    _rs_save_frozen()
                 renpy.restart_interaction()
-            elif cmd.get("op") == "reload":
+            elif op == "unfreeze":
+                if _rs_periodic.frozen.pop(cmd.get("name"), None) is not None:
+                    _rs_save_frozen()
+            elif op == "reload":
                 renpy.queue_event("reload_game")
 
     def _rs_periodic():
@@ -134,6 +161,7 @@ BRIDGE_CODE = textwrap.dedent(r'''
         _rs_periodic.last = now
         try:
             _rs_run_commands()
+            _rs_apply_frozen()
             if now - _rs_periodic.last_state >= 1.0:
                 _rs_periodic.last_state = now
                 _rs_write_state()
@@ -142,9 +170,16 @@ BRIDGE_CODE = textwrap.dedent(r'''
 
     _rs_periodic.last = 0.0
     _rs_periodic.last_state = 0.0
+    _rs_periodic.frozen = {}
     try:
         _rs_os.makedirs(_rs_cmd_dir)
     except OSError:
+        pass
+    try:
+        with open(_rs_os.path.join(_rs_dir, "frozen.json")) as _rs_f:
+            for _rs_k, _rs_v in _rs_json.load(_rs_f).items():
+                _rs_periodic.frozen[_rs_k] = _rs_plain(_rs_v)
+    except Exception:
         pass
     if hasattr(config, "periodic_callbacks"):
         config.periodic_callbacks.append(_rs_periodic)
@@ -211,6 +246,21 @@ class LiveGame:
     def reload(self):
         self.send("reload")
 
+    def freeze(self, name: str, value):
+        """Keep ``name`` at ``value`` (re-applied ~4×/s, survives reloads) until unfrozen."""
+        check_plain(value)
+        self.send("freeze", name=name, value=value)
+
+    def unfreeze(self, name: str):
+        self.send("unfreeze", name=name)
+
+    def frozen(self) -> set:
+        return set((self.read_state() or {}).get("frozen", []))
+
+    def supports_freeze(self) -> bool:
+        """False for games patched with RenPy Suite 1.1 or older (re-apply the patch)."""
+        return (self.read_state() or {}).get("bridge", 1) >= 2
+
     def cleanup(self):
         if self.dir.is_dir():
             shutil.rmtree(self.dir, ignore_errors=True)
@@ -229,3 +279,4 @@ class LiveDoc:
         self.path = live.state_path
         self.variables = state.get("variables", {})
         self.types = state.get("types", {})
+        self.frozen = set(state.get("frozen", []))

@@ -75,6 +75,32 @@ class BridgeTest(unittest.TestCase):
         self.assertTrue(self.restarts)
         self.assertEqual(list(self.client.commands.iterdir()), [])
 
+    def test_freeze_keeps_value_and_survives_restart(self):
+        self.client.freeze("money", 9999)
+        self.run_tick()
+        self.assertEqual(self.store.money, 9999)
+        self.store.money = 5  # the game spends money …
+        self.run_tick()
+        self.assertEqual(self.store.money, 9999)  # … and the freeze puts it back
+        self.assertEqual(self.client.frozen(), {"money"})
+        self.assertTrue(self.client.supports_freeze())
+
+        # A reload/restart runs the bridge again: the freeze is restored from frozen.json.
+        ns, store, _, _ = fake_game_namespace(self.root)
+        exec(compile(live.BRIDGE_CODE, "bridge", "exec"), ns)
+        store.money = 1
+        fn = ns["_rs_periodic"]
+        fn.last = fn.last_state = 0.0
+        fn()
+        self.assertEqual(store.money, 9999)
+
+        self.client.unfreeze("money")
+        self.run_tick()
+        self.store.money = 3
+        self.run_tick()
+        self.assertEqual(self.store.money, 3)
+        self.assertEqual(self.client.frozen(), set())
+
     def test_client_rejects_non_plain_values(self):
         with self.assertRaises(ValueError):
             self.client.set_variable("money", (1, 2))

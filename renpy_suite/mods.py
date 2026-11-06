@@ -431,12 +431,17 @@ class ModInstaller:
 # cheats
 # ---------------------------------------------------------------------------
 
-def apply_cheats_live(game, cheats) -> int:
+def apply_cheats_live(game, cheats, freeze=False) -> int:
     client = live.LiveGame(game.root)
     if not client.is_running():
         raise ModError("live_not_running")
+    if freeze and not client.supports_freeze():
+        raise ModError("freeze_old_patch")
     for cheat in cheats:
-        client.set_variable(cheat.name, cheat.value)
+        if freeze:
+            client.freeze(cheat.name, cheat.value)
+        else:
+            client.set_variable(cheat.name, cheat.value)
     return len(cheats)
 
 

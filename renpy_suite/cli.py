@@ -168,10 +168,22 @@ def cmd_live(args):
             sys.exit("unknown or non-plain variable: %s" % name)
         client.set_variable(name, values.parse_value(value, state["variables"][name]))
         print("%s set in the running game" % name)
+    if args.freeze:
+        name, value = args.freeze
+        state = client.read_state() or {}
+        if name not in state.get("variables", {}):
+            sys.exit("unknown or non-plain variable: %s" % name)
+        if not client.supports_freeze():
+            sys.exit("the game's patch is too old for freezing; apply the 'live' patch again and restart the game")
+        client.freeze(name, values.parse_value(value, state["variables"][name]))
+        print("%s frozen in the running game" % name)
+    if args.unfreeze:
+        client.unfreeze(args.unfreeze)
+        print("%s unfrozen" % args.unfreeze)
     if args.reload:
         client.reload()
         print("reload requested")
-    if not args.set and not args.reload:
+    if not (args.set or args.reload or args.freeze or args.unfreeze):
         state = client.read_state() or {}
         needle = (args.filter or "").lower()
         for name, value in sorted(state.get("variables", {}).items()):
@@ -295,6 +307,8 @@ def build_parser():
     s.add_argument("game")
     s.add_argument("--filter", help="only variables containing this text")
     s.add_argument("--set", nargs=2, metavar=("NAME", "VALUE"), help="change a variable")
+    s.add_argument("--freeze", nargs=2, metavar=("NAME", "VALUE"), help="keep a variable at a value")
+    s.add_argument("--unfreeze", metavar="NAME", help="stop freezing a variable")
     s.add_argument("--reload", action="store_true", help="reload the game (like Shift+R)")
     s.set_defaults(func=cmd_live)
 
