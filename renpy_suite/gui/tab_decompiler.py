@@ -8,8 +8,9 @@ from tkinter import filedialog, messagebox, ttk
 
 from .. import rpyc
 from ..game import default_decompile_dir
-from ..scriptedit import ScriptEditor
 from ..i18n import t
+from ..live import LiveGame
+from ..scriptedit import ScriptEditor
 from .widgets import ProgressPanel, open_path, scrolled
 
 
@@ -66,6 +67,8 @@ class DecompilerTab(ttk.Frame):
         ttk.Button(erow, text=t("save_to_game"), command=self.save_to_game).pack(side=tk.LEFT)
         ttk.Button(erow, text=t("restore_original"), command=self.restore_original).pack(side=tk.LEFT, padx=6)
         ttk.Button(erow, text=t("save_preview"), command=self.save_preview).pack(side=tk.RIGHT)
+        self.reload_after_save = tk.BooleanVar(value=True)
+        ttk.Checkbutton(right, text=t("reload_after_save"), variable=self.reload_after_save).pack(anchor="w", pady=(4, 0))
         ttk.Label(right, text=t("editor_hint"), foreground="gray", wraplength=640,
                   justify=tk.LEFT).pack(anchor="w", pady=(4, 0))
         panes.add(right, weight=3)
@@ -200,7 +203,12 @@ class DecompilerTab(ttk.Frame):
         self.text.edit_modified(False)
         self.fill_list()
         self.update_edit_status()
-        self.app.set_status(t("script_saved", path=path), "green")
+        game_live = LiveGame(self.game.root)
+        if self.reload_after_save.get() and game_live.is_running():
+            game_live.reload()
+            self.app.set_status(t("script_saved_reloading", path=path), "green")
+        else:
+            self.app.set_status(t("script_saved", path=path), "green")
 
     def restore_original(self):
         if self.current is None:

@@ -27,6 +27,7 @@ and switch on the developer console. It comes with a GUI and a command-line inte
 | **Persistent editor** | Edits `persistent` data such as gallery and ending unlocks, or seen-text flags. |
 | **Save signing** | Ren'Py 8.1+ signs saves and persistent data. Edited files are re-signed with **your own** local key, so the game accepts them without warnings. |
 | **Developer patch** | One click enables developer mode, the console (Shift+O), always-allowed skipping and rollback. Removing it is just as easy. |
+| **Live connection** | Change variables of the *running* game instantly, and have the game reload automatically when you save an edited script. |
 | **CLI** | Every feature is scriptable from the command line. |
 
 ## Requirements
@@ -58,8 +59,28 @@ Shows what was detected about the game. The **Developer patch** section writes a
 | Developer console | `config.console = True`: Shift+O opens a Python console inside the game |
 | Always allow skipping | `config.allow_skipping` / `config.fast_skipping` |
 | Rollback | `config.rollback_enabled` with a long rollback history |
+| Live connection | Lets RenPy Suite talk to the running game (see below). Turns on developer mode as well. |
 
 **Remove patch** deletes the file and its compiled `.rpyc` again.
+
+#### Live connection
+With this option the game checks a folder (`<game folder>/renpy_suite_live/`) a few times per second. Through
+it, RenPy Suite can:
+
+- **Change variables instantly.** In the Save Editor, click **Running game** to see the game's current
+  variables. Edits take effect immediately, with no reload or save needed. To keep them, save inside the game.
+- **Reload after saving a script.** When you save an edited script in the Scripts tab, the running game
+  reloads, just like pressing Shift+R. Ren'Py saves your position, recompiles the changed script and continues
+  where you were.
+
+The connection only carries plain values (numbers, text, true/false, None, lists and dicts) and never code. It
+can only replace variables that already exist and already hold such a value. Removing the patch also deletes
+the folder.
+
+> **Tip:** A reload keeps your current game state. Changing `default x = False` to `True` in a script
+> therefore does **not** affect a game that is already running or saved, because the variable already exists.
+> Change values of a running game in the Save Editor (**Running game**), and use script edits for logic and
+> `define` values.
 
 ### Archives
 All archives of the selected game are listed on the left, and you can add others with **Add…**.
@@ -75,8 +96,8 @@ Lists every compiled script, both loose files and those inside archives. Click o
 source in the editor. Use **Find** (Ctrl+F) to jump to what you're looking for.
 
 To change the game, edit the code (for example `default unlocked_all = False` → `True`) and press
-**Save to game** (Ctrl+S). The game uses your version the next time it starts. Edited scripts are marked
-with ✎. Close the game before saving.
+**Save to game** (Ctrl+S). The game uses your version the next time it starts. With the
+[live connection](#live-connection), a running game reloads right away instead. Edited scripts are marked with ✎.
 
 What happens behind the scenes:
 - Your text is saved as `game/<script>.rpy` next to the compiled `.rpyc`. Ren'Py notices the source changed
@@ -131,6 +152,11 @@ python -m renpy_suite set   path/to/persistent gallery_unlocked true
 
 python -m renpy_suite devmode "C:/Games/MyGame" --options developer,console,skipping,rollback
 python -m renpy_suite devmode "C:/Games/MyGame" --disable
+
+python -m renpy_suite devmode "C:/Games/MyGame" --options live   # then start the game
+python -m renpy_suite live "C:/Games/MyGame" --filter affection  # show variables of the running game
+python -m renpy_suite live "C:/Games/MyGame" --set money 5000
+python -m renpy_suite live "C:/Games/MyGame" --reload
 ```
 
 Use `--lang en` or `--lang de` (or the `RENPY_SUITE_LANG` environment variable) to override the interface language.
@@ -194,6 +220,7 @@ renpy_suite/
   rpa.py          archive reading / writing
   rpyc.py         .rpyc decompiler
   scriptedit.py   saving edited scripts into a game, with backup/restore
+  live.py         live connection to a running game (in-game bridge + client)
   saves.py        save + persistent files
   savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
   stubpickle.py   safe, round-trip capable unpickler

@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import locations, rpa, rpyc
+from . import live, locations, rpa, rpyc
 
 PATCH_FILE = "zz_renpy_suite_patch.rpy"
 
@@ -17,7 +17,10 @@ PATCH_OPTIONS = {
     "console": ["config.console = True"],
     "skipping": ["config.allow_skipping = True", "config.fast_skipping = True"],
     "rollback": ["config.rollback_enabled = True", "config.hard_rollback_limit = 1000"],
+    "live": live.BRIDGE_CODE.splitlines(),
 }
+# Reloading a running game is a developer-mode feature.
+PATCH_REQUIRES = {"live": {"developer"}}
 
 _SAVE_DIR_RE = re.compile(r"""config\.save_directory\s*=\s*[rRuU]?(["'])(.+?)\1""")
 
@@ -174,7 +177,10 @@ def patch_status(game_dir) -> set:
 
 
 def apply_patch(game_dir, options) -> Path:
-    options = [o for o in PATCH_OPTIONS if o in set(options)]
+    options = set(options)
+    for opt in list(options):
+        options |= PATCH_REQUIRES.get(opt, set())
+    options = [o for o in PATCH_OPTIONS if o in options]
     if not options:
         remove_patch(game_dir)
         return patch_path(game_dir)
@@ -184,7 +190,7 @@ def apply_patch(game_dir, options) -> Path:
     ]
     for opt in options:
         lines.append("    # option: %s" % opt)
-        lines += ["    " + l for l in PATCH_OPTIONS[opt]]
+        lines += [("    " + l) if l.strip() else "" for l in PATCH_OPTIONS[opt]]
     path = patch_path(game_dir)
     path.write_text("\n".join(lines) + "\n", "utf-8")
     # A stale .rpyc from an older patch would otherwise be preferred if newer.
@@ -195,6 +201,7 @@ def apply_patch(game_dir, options) -> Path:
 
 
 def remove_patch(game_dir) -> bool:
+    live.LiveGame(Path(game_dir).parent).cleanup()
     removed = False
     for suffix in (".rpy", ".rpyc"):
         p = patch_path(game_dir).with_suffix(suffix)

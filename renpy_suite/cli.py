@@ -7,7 +7,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, game, i18n, rpa, rpyc, saves, savetoken, values
+from . import __version__, game, i18n, live, rpa, rpyc, saves, savetoken, values
 
 
 def _progress(prefix):
@@ -153,7 +153,30 @@ def cmd_devmode(args):
     if unknown:
         sys.exit("unknown option(s): %s (choose from %s)" % (", ".join(sorted(unknown)), ", ".join(game.PATCH_OPTIONS)))
     path = game.apply_patch(g.game_dir, options)
-    print("Patch written to %s (%s)" % (path, ", ".join(options)))
+    print("Patch written to %s (%s)" % (path, ", ".join(sorted(game.patch_status(g.game_dir)))))
+
+
+def cmd_live(args):
+    g = game.GameInfo.load(args.game)
+    client = live.LiveGame(g.root)
+    if not client.is_running():
+        sys.exit("no running game with a live connection (apply the 'live' patch and start the game)")
+    if args.set:
+        name, value = args.set
+        state = client.read_state() or {}
+        if name not in state.get("variables", {}):
+            sys.exit("unknown or non-plain variable: %s" % name)
+        client.set_variable(name, values.parse_value(value, state["variables"][name]))
+        print("%s set in the running game" % name)
+    if args.reload:
+        client.reload()
+        print("reload requested")
+    if not args.set and not args.reload:
+        state = client.read_state() or {}
+        needle = (args.filter or "").lower()
+        for name, value in sorted(state.get("variables", {}).items()):
+            if not needle or needle in name.lower():
+                print("%-40s %-16s %s" % (name, state["types"].get(name, ""), values.preview(value, 200)))
 
 
 def build_parser():
@@ -215,6 +238,13 @@ def build_parser():
                    help="comma-separated: %s" % ", ".join(game.PATCH_OPTIONS))
     s.add_argument("--disable", action="store_true", help="remove the patch")
     s.set_defaults(func=cmd_devmode)
+
+    s = sub.add_parser("live", help="show or change variables of a running game (needs the 'live' patch)")
+    s.add_argument("game")
+    s.add_argument("--filter", help="only variables containing this text")
+    s.add_argument("--set", nargs=2, metavar=("NAME", "VALUE"), help="change a variable")
+    s.add_argument("--reload", action="store_true", help="reload the game (like Shift+R)")
+    s.set_defaults(func=cmd_live)
     return p
 
 

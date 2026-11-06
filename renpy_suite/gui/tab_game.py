@@ -14,6 +14,7 @@ OPTION_KEYS = {
     "console": "opt_console",
     "skipping": "opt_skipping",
     "rollback": "opt_rollback",
+    "live": "opt_live",
 }
 
 
@@ -44,7 +45,7 @@ class GameTab(ttk.Frame):
         ttk.Label(patch, text=t("patch_intro"), foreground="gray").pack(anchor="w", pady=(0, 6))
         self.option_vars = {}
         for opt, key in OPTION_KEYS.items():
-            var = tk.BooleanVar(value=opt in ("developer", "console"))
+            var = tk.BooleanVar(value=opt in ("developer", "console", "live"))
             ttk.Checkbutton(patch, text=t(key), variable=var).pack(anchor="w")
             self.option_vars[opt] = var
         row = ttk.Frame(patch)
@@ -93,6 +94,8 @@ class GameTab(ttk.Frame):
             return
         options = {o for o, v in self.option_vars.items() if v.get()}
         path = gamemod.apply_patch(self.game.game_dir, options)
+        for opt in gamemod.patch_status(self.game.game_dir):
+            self.option_vars[opt].set(True)
         self.update_patch_status()
         self.app.set_status(t("patch_applied", path=path) if options else t("patch_removed"), "green")
 

@@ -10,6 +10,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .. import saves, savetoken, values
 from ..i18n import t
+from ..live import LiveDoc, LiveGame
 from .widgets import scrolled
 
 DUMMY = "__dummy__"
@@ -51,6 +52,7 @@ class SavesTab(ttk.Frame):
         orow.pack(fill=tk.X, pady=(6, 0))
         ttk.Button(orow, text=t("open_save_file"), command=self.open_file).pack(side=tk.LEFT)
         ttk.Button(orow, text=t("open_persistent"), command=self.open_persistent).pack(side=tk.LEFT, padx=6)
+        ttk.Button(orow, text=t("open_live"), command=self.open_live).pack(side=tk.LEFT)
         panes.add(left, weight=2)
 
         # -- right: variables ----------------------------------------------
@@ -150,6 +152,26 @@ class SavesTab(ttk.Frame):
             return
         self.load(found[0], persistent=True)
 
+    def open_live(self):
+        if self.game is None:
+            messagebox.showinfo(t("app_title"), t("need_game"))
+            return
+        game_live = LiveGame(self.game.root)
+        if not game_live.is_running():
+            messagebox.showinfo(t("app_title"), t("live_not_running"))
+            return
+        if not self.can_close():
+            return
+        try:
+            self.doc = LiveDoc(game_live)
+        except ValueError as exc:
+            messagebox.showerror(t("error"), str(exc))
+            return
+        self.dirty = False
+        self.save_tree.selection_remove(self.save_tree.selection())
+        self.show_header()
+        self.fill_variables()
+
     # -- loading ----------------------------------------------------------
 
     def load(self, path, persistent):
@@ -179,6 +201,8 @@ class SavesTab(ttk.Frame):
         if isinstance(doc, saves.SaveFile):
             name = doc.extra_info or doc.path.name
             text = t("save_header", name=name, version=doc.renpy_version or "?", signed=signed)
+        elif isinstance(doc, LiveDoc):
+            text = t("live_header")
         else:
             text = t("persistent_header", signed=signed)
         text += "\n" + str(doc.path)
@@ -210,11 +234,12 @@ class SavesTab(ttk.Frame):
                 continue
             if needle and needle not in name.lower():
                 continue
-            self.add_node("", name, values.Ref(variables, key), value)
+            type_name = self.doc.types.get(name) if isinstance(self.doc, LiveDoc) else None
+            self.add_node("", name, values.Ref(variables, key), value, type_name)
 
-    def add_node(self, parent, label, ref, value):
+    def add_node(self, parent, label, ref, value, type_name=None):
         iid = self.var_tree.insert(parent, tk.END, text=label,
-                                   values=(values.type_label(value), values.preview(value)))
+                                   values=(type_name or values.type_label(value), values.preview(value)))
         self.nodes[iid] = (ref, value)
         if values.has_children(value):
             self.var_tree.insert(iid, tk.END, iid=iid + DUMMY)
@@ -237,6 +262,13 @@ class SavesTab(ttk.Frame):
         if ref is None or not values.is_editable(value):
             messagebox.showinfo(t("app_title"), t("not_editable"))
             return
+        top = iid
+        while self.var_tree.parent(top):
+            top = self.var_tree.parent(top)
+        top_name = self.var_tree.item(top, "text")
+        if isinstance(self.doc, LiveDoc) and self.doc.types.get(top_name) == "tuple":
+            messagebox.showinfo(t("app_title"), t("live_not_editable"))
+            return
         name = self.var_tree.item(iid, "text")
         text = simpledialog.askstring(t("edit_title", name=name),
                                       t("edit_prompt", name=name, type=values.type_label(value)),
@@ -248,21 +280,34 @@ class SavesTab(ttk.Frame):
         except (ValueError, SyntaxError, TypeError) as exc:
             messagebox.showerror(t("error"), t("invalid_value", error=exc))
             return
+        old = ref.get()
         ref.set(new)
+        if isinstance(self.doc, LiveDoc):
+            try:
+                self.doc.live.set_variable(top_name, self.doc.variables[top_name])
+            except (OSError, ValueError) as exc:
+                ref.set(old)
+                messagebox.showerror(t("error"), str(exc))
+                return
+            self.app.set_status(t("live_applied", name=top_name), "green")
         self.nodes[iid] = (ref, new)
         self.var_tree.item(iid, values=(values.type_label(new), values.preview(new)))
         for child in self.var_tree.get_children(iid):
             self.var_tree.delete(child)
         if values.has_children(new):
             self.var_tree.insert(iid, tk.END, iid=iid + DUMMY)
-        self.dirty = True
-        self.show_header()
+        if not isinstance(self.doc, LiveDoc):
+            self.dirty = True
+            self.show_header()
 
     # -- writing ------------------------------------------------------------
 
     def write(self):
         if self.doc is None:
             messagebox.showinfo(t("app_title"), t("nothing_open"))
+            return
+        if isinstance(self.doc, LiveDoc):
+            messagebox.showinfo(t("app_title"), t("live_instant"))
             return
         keys = savetoken.load_signing_keys() if self.doc.is_signed else []
         if self.doc.is_signed and not keys:
@@ -282,6 +327,10 @@ class SavesTab(ttk.Frame):
 
     def revert(self):
         if self.doc is None:
+            return
+        if isinstance(self.doc, LiveDoc):
+            self.doc = None
+            self.open_live()
             return
         path, persistent = self.doc.path, isinstance(self.doc, saves.PersistentFile)
         self.dirty = False
