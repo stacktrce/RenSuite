@@ -5,3 +5,5 @@ extracted/
 decompiled/
 *_extracted/
 .venv/
+build/
+dist/

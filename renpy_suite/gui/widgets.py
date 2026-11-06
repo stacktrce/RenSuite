@@ -44,7 +44,8 @@ class TaskRunner:
             try:
                 result = work()
             except Exception as exc:
-                traceback.print_exc()
+                if sys.stderr is not None:  # None under pythonw / windowed .exe builds
+                    traceback.print_exc()
                 handler = on_error or (lambda e: messagebox.showerror(t("error"), str(e)))
                 self.call(lambda e=exc: handler(e))
             else:

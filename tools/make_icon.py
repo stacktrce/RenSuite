@@ -124,11 +124,27 @@ def png(n, raw):
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
 
 
+def ico(images) -> bytes:
+    """A Windows .ico holding PNG images (supported since Windows Vista)."""
+    header = struct.pack("<HHH", 0, 1, len(images))
+    offset = 6 + 16 * len(images)
+    entries, blobs = b"", b""
+    for n, data in images:
+        entries += struct.pack("<BBBBHHII", n % 256, n % 256, 0, 0, 1, 32, len(data), offset + len(blobs))
+        blobs += data
+    return header + entries + blobs
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    images = []
     for n in SIZES:
-        (OUT / ("icon-%d.png" % n)).write_bytes(png(n, render(n)))
+        data = png(n, render(n))
+        (OUT / ("icon-%d.png" % n)).write_bytes(data)
+        images.append((n, data))
         print("wrote", OUT / ("icon-%d.png" % n))
+    (OUT / "icon.ico").write_bytes(ico(sorted(images)))
+    print("wrote", OUT / "icon.ico")
 
 
 if __name__ == "__main__":

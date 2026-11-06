@@ -1,0 +1,41 @@
+name: Build and release
+
+# Push a tag like v1.2.0 to build RenPySuite.exe and attach it to a GitHub release.
+# "Run workflow" on the Actions tab builds it as a downloadable artifact without releasing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Build RenPySuite.exe
+        run: |
+          python -m pip install --upgrade pip pyinstaller
+          python tools/build_exe.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RenPySuite-windows
+          path: dist/RenPySuite.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/RenPySuite.exe
+          generate_release_notes: true

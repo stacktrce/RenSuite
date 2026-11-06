@@ -35,6 +35,12 @@ and switch on the developer console. It comes with a GUI and a command-line inte
 | **Mods** | Share and import mods, a bit like Cheat Engine tables. One `.rsmod` file can carry new scripts, script changes and one-click cheats. Uninstalling is clean. |
 | **CLI** | Every feature is scriptable from the command line. |
 
+## Download
+
+Windows users without Python can download **`RenPySuite.exe`** from the
+[Releases page](https://github.com/stacktrce/RenSuite/releases) and start it directly. Nothing needs
+to be installed.
+
 ## Requirements
 
 - Python **3.8 or newer**, from [python.org](https://www.python.org/downloads/).
@@ -328,6 +334,7 @@ docs/MODDING.md   how to make mods
 examples/         example mod
 tests/            unit and end-to-end tests (stdlib unittest)
 tools/make_icon.py  draws the icon from code (original artwork, no third-party rights)
+tools/build_exe.py  builds the standalone .exe with PyInstaller
 RenPySuite.pyw    double-click launcher
 ```
 
@@ -339,6 +346,18 @@ python -m unittest discover -s tests
 
 The tests build realistic fixtures (archives, compiled scripts, signed saves) from look-alike Ren'Py
 classes, so Ren'Py itself is not needed.
+
+### Building the .exe
+
+```bash
+pip install pyinstaller
+python tools/build_exe.py          # → dist/RenPySuite.exe
+```
+
+Releases are built automatically: pushing a tag such as `v1.2.0` runs
+`.github/workflows/release.yml`. That workflow runs the tests, builds `RenPySuite.exe` on Windows and
+attaches it to a new GitHub release. You can also start it from the Actions tab to get the `.exe` as a
+downloadable artifact without making a release.
 
 ### Adding a language
 Open `renpy_suite/i18n.py`, copy the `"en"` block, translate the values and add it under the language's
