@@ -17,6 +17,7 @@ from .tab_decompiler import DecompilerTab
 from .tab_game import GameTab
 from .tab_mods import ModsTab
 from .tab_saves import SavesTab
+from .tab_scan import ScanTab
 from .theme import c
 from .widgets import TaskRunner
 
@@ -87,6 +88,7 @@ class SuiteApp:
             (ArchivesTab(self.notebook, self), "tab_archives"),
             (DecompilerTab(self.notebook, self), "tab_decompiler"),
             (SavesTab(self.notebook, self), "tab_saves"),
+            (ScanTab(self.notebook, self), "tab_scan"),
             (ModsTab(self.notebook, self), "tab_mods"),
         ]
         self.mods_tab = self.tabs[-1][0]

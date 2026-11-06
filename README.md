@@ -31,6 +31,7 @@ and switch on the developer console. It comes with a GUI and a command-line inte
 | **Save signing** | Ren'Py 8.1+ signs saves and persistent data. Edited files are re-signed with **your own** local key, so the game accepts them without warnings. |
 | **Developer patch** | One click enables developer mode, the console (Shift+O), always-allowed skipping and rollback. Removing it is just as easy. |
 | **Live connection** | Change variables of the *running* game instantly, and have the game reload automatically when you save an edited script. |
+| **Value search** | Find the variable behind a value (money, affection …) with first/next scans, like Cheat Engine, then set or freeze it. |
 | **Mods** | Share and import mods, a bit like Cheat Engine tables. One `.rsmod` file can carry new scripts, script changes and one-click cheats. Uninstalling is clean. |
 | **CLI** | Every feature is scriptable from the command line. |
 
@@ -152,6 +153,20 @@ read-only copies for browsing and searching, and the game doesn't use them.
 **Persistent data** opens the game's `persistent` file in the same editor.
 
 > **Close the game first.** Ren'Py rewrites its persistent data when it quits and would overwrite your changes.
+
+### Value search
+Find the variable behind a number on screen, the same way Cheat Engine's scanner works:
+
+1. Pick where snapshots come from: the **running game** (live connection), the **newest save**, or a save
+   you choose.
+2. **First scan.** Optionally keep only values *equal to* what you see, e.g. your money `100`.
+3. Change the value in the game, e.g. buy something. If you scan saves, save the game now.
+4. **Next scan** with the matching filter: *decreased*, *increased*, *changed*, *unchanged* or
+   *equal to*. Repeat until only a few results are left.
+5. **Set in running game…** or **Freeze in running game…** on a result.
+
+It looks inside lists, dicts and objects too (`player.hp`, `inventory[2]`). Results inside objects can be
+copied by name and edited in the Save Editor.
 
 ### Mods
 Mods are shared as `.rsmod` files, much like Cheat Engine tables. **Mods → Import mod…** adds one to your
@@ -275,6 +290,7 @@ renpy_suite/
   scriptedit.py   saving edited scripts into a game, with backup/restore
   live.py         live connection to a running game (in-game bridge + client)
   mods.py         mod format, mod library, installer and cheats
+  scan.py         Cheat-Engine style value search over snapshots
   saves.py        save + persistent files
   savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
   stubpickle.py   safe, round-trip capable unpickler
