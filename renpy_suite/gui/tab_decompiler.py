@@ -13,6 +13,7 @@ from ..live import LiveGame
 from ..scriptedit import ScriptEditor
 from ..search import ScriptIndex
 from .search_window import SearchWindow
+from .translate_dialog import TranslateDialog
 from .widgets import ProgressPanel, open_path, scrolled
 from .theme import c
 
@@ -44,6 +45,7 @@ class DecompilerTab(ttk.Frame):
                         command=self.reload_sources).pack(anchor="w", pady=(6, 0))
         ttk.Button(left, text=t("add_rpyc"), command=self.add_files).pack(anchor="w", pady=(4, 0))
         ttk.Button(left, text=t("search_all"), command=self.open_search).pack(anchor="w", pady=(4, 0))
+        ttk.Button(left, text=t("tr_export"), command=self.open_translate).pack(anchor="w", pady=(4, 0))
         self.search_window = None
         self.index = None
         panes.add(left, weight=1)
@@ -191,6 +193,12 @@ class DecompilerTab(ttk.Frame):
             self.search_window.entry.focus_set()
             return
         self.search_window = SearchWindow(self)
+
+    def open_translate(self):
+        if self.game is None:
+            messagebox.showinfo(t("app_title"), t("need_game"))
+            return
+        TranslateDialog(self)
 
     def open_at(self, display_name: str, line: int):
         """Show ``display_name`` in the editor and highlight ``line``."""

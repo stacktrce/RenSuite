@@ -7,7 +7,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, game, i18n, live, mods, rpa, rpyc, saves, savetoken, values
+from . import __version__, game, i18n, live, mods, rpa, rpyc, saves, savetoken, translate, values
 
 
 def _progress(prefix):
@@ -243,6 +243,27 @@ def cmd_mod_list(args):
         print("%-24s %-10s %s" % (mod_id, entry.get("version", ""), entry.get("installed", "")))
 
 
+def cmd_translate(args):
+    g = game.GameInfo.load(args.game)
+    out = Path(args.output) if args.output else g.root / "translations"
+    if args.into_game:
+        if (g.game_dir / "tl" / args.language).exists():
+            sys.exit("the game already has a '%s' translation; export to a folder instead" % args.language)
+        out = g.game_dir
+    lines, errors = translate.extract(g, _progress("reading scripts"))
+    for name, msg in errors:
+        print("  error: %s: %s" % (name, msg))
+    if not args.no_csv:
+        csv_dir = g.root / "translations" if args.into_game else out
+        csv_dir.mkdir(parents=True, exist_ok=True)
+        translate.write_csv(lines, csv_dir / "dialogue.csv")
+        print("Wrote %d lines to %s" % (len(lines), csv_dir / "dialogue.csv"))
+    translations = translate.read_translations(args.from_csv) if args.from_csv else None
+    counts = translate.write_tl(lines, args.language, out, translations)
+    print("Wrote %(say)d dialogue lines and %(string)d strings (%(translated)d translated)" % counts,
+          "to", out / "tl" / args.language)
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="renpy_suite", description="All-in-one toolkit for Ren'Py games.")
     p.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -311,6 +332,15 @@ def build_parser():
     s.add_argument("--unfreeze", metavar="NAME", help="stop freezing a variable")
     s.add_argument("--reload", action="store_true", help="reload the game (like Shift+R)")
     s.set_defaults(func=cmd_live)
+
+    s = sub.add_parser("translate", help="export dialogue as CSV and Ren'Py translation files")
+    s.add_argument("game")
+    s.add_argument("--language", required=True, help="language name, e.g. german")
+    s.add_argument("-o", "--output", help="output folder (default: <game>/translations)")
+    s.add_argument("--from-csv", help="fill in translations from this CSV (the 'translation' column)")
+    s.add_argument("--no-csv", action="store_true", help="don't write dialogue.csv")
+    s.add_argument("--into-game", action="store_true", help="write tl files directly into game/tl/<language>")
+    s.set_defaults(func=cmd_translate)
 
     s = sub.add_parser("mod-info", help="show what a mod (.rsmod, mod.json or folder) contains")
     s.add_argument("mod")

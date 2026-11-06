@@ -142,6 +142,19 @@ What happens behind the scenes:
 Because decompilation is best-effort, check a script you edit for `# [renpy-suite]` comments. If the game
 shows an error after your change, use **Restore original**.
 
+**Export translations…** creates the basis for a fan translation:
+
+1. Enter a language name (e.g. `german`) and export. You get `dialogue.csv`, with every dialogue line
+   and menu choice, plus Ren'Py translation files in `tl/german/`.
+2. Translate the `translation` column of the CSV in Excel, LibreOffice or Google Sheets.
+3. Export again with **Use translations from CSV** to fill the translations into the `tl` files.
+4. Copy the `tl` folder into the game's `game` folder, or choose **write directly into the game**. Then
+   pick the language in the game's language menu, or run `renpy.change_language("german")` in the
+   developer console.
+
+Lines from very old games (before Ren'Py 6.15) have no translation IDs. They appear in the CSV but not in
+the `tl` files.
+
 **Decompile all** writes `.rpy` files to `<game folder>/decompiled`, keeping the folder structure. These are
 read-only copies for browsing and searching, and the game doesn't use them.
 
@@ -224,6 +237,9 @@ python -m renpy_suite live "C:/Games/MyGame" --set money 5000
 python -m renpy_suite live "C:/Games/MyGame" --freeze money 5000   # --unfreeze money
 python -m renpy_suite live "C:/Games/MyGame" --reload
 
+python -m renpy_suite translate "C:/Games/MyGame" --language german            # CSV + tl files
+python -m renpy_suite translate "C:/Games/MyGame" --language german --from-csv dialogue.csv --into-game
+
 python -m renpy_suite mod-pack examples/quality-of-life qol.rsmod  # share a mod folder as one file
 python -m renpy_suite mod-info qol.rsmod
 python -m renpy_suite mod-install "C:/Games/MyGame" qol.rsmod --yes
@@ -296,6 +312,7 @@ renpy_suite/
   mods.py         mod format, mod library, installer and cheats
   scan.py         Cheat-Engine style value search over snapshots
   search.py       full-text search over all scripts
+  translate.py    dialogue export (CSV + Ren'Py tl files)
   saves.py        save + persistent files
   savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
   stubpickle.py   safe, round-trip capable unpickler
