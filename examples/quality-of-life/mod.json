@@ -1,0 +1,13 @@
+{
+  "format": "renpy-suite-mod",
+  "format_version": 1,
+  "id": "quality-of-life",
+  "name": "Quality of life",
+  "version": "1.0",
+  "author": "RenPy Suite",
+  "description": "Always allows skipping and rollback. Also includes two example cheats — rename the variables to match the game you play.",
+  "cheats": [
+    {"name": "money", "value": 99999, "label": "Lots of money", "description": "Only works if the game stores money in a variable called 'money'."},
+    {"name": "affection", "value": 100, "label": "Max affection"}
+  ]
+}

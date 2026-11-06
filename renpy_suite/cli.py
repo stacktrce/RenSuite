@@ -7,7 +7,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, game, i18n, live, rpa, rpyc, saves, savetoken, values
+from . import __version__, game, i18n, live, mods, rpa, rpyc, saves, savetoken, values
 
 
 def _progress(prefix):
@@ -179,6 +179,58 @@ def cmd_live(args):
                 print("%-40s %-16s %s" % (name, state["types"].get(name, ""), values.preview(value, 200)))
 
 
+def cmd_mod_info(args):
+    mod = mods.load(args.mod)
+    print("%s %s (%s) by %s" % (mod.name, mod.version, mod.id, mod.author or "?"))
+    if mod.description:
+        print(mod.description)
+    if mod.game:
+        print("Made for:", ", ".join("%s=%s" % kv for kv in mod.game.items()))
+    for path in sorted(mod.files):
+        print("  file        game/%s/%s/%s" % (mods.INSTALL_DIR, mod.id, path))
+    for r in mod.replacements:
+        print("  replace     %s: %r -> %r" % (r.script, r.find[:60], r.replace[:60]))
+    for ch in mod.cheats:
+        print("  cheat       %s = %r  (%s)" % (ch.name, ch.value, ch.label))
+
+
+def cmd_mod_pack(args):
+    mod = mods.pack(args.folder, args.output)
+    print("Packed %s (%d files) into %s" % (mod.id, len(mod.files), args.output))
+
+
+def cmd_mod_install(args):
+    g = game.GameInfo.load(args.game)
+    mod = mods.load(args.mod)
+    installer = mods.ModInstaller(g)
+    warnings, error = installer.check(mod)
+    for w in warnings:
+        print("warning:", w)
+    if error is not None:
+        sys.exit("error: %s" % error)
+    if mod.runs_code and not args.yes:
+        sys.exit("this mod runs code inside the game; review it with 'mod-info' and re-run with --yes")
+    installer.install(mod)
+    print("Installed %s %s into %s" % (mod.name, mod.version, g.name))
+
+
+def cmd_mod_uninstall(args):
+    g = game.GameInfo.load(args.game)
+    failed = mods.ModInstaller(g).uninstall(args.id)
+    for display in failed:
+        print("warning: could not revert %s automatically" % display)
+    print("Uninstalled", args.id)
+
+
+def cmd_mod_list(args):
+    g = game.GameInfo.load(args.game)
+    installed = mods.ModInstaller(g).installed()
+    if not installed:
+        print("no mods installed")
+    for mod_id, entry in sorted(installed.items()):
+        print("%-24s %-10s %s" % (mod_id, entry.get("version", ""), entry.get("installed", "")))
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="renpy_suite", description="All-in-one toolkit for Ren'Py games.")
     p.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -245,6 +297,30 @@ def build_parser():
     s.add_argument("--set", nargs=2, metavar=("NAME", "VALUE"), help="change a variable")
     s.add_argument("--reload", action="store_true", help="reload the game (like Shift+R)")
     s.set_defaults(func=cmd_live)
+
+    s = sub.add_parser("mod-info", help="show what a mod (.rsmod, mod.json or folder) contains")
+    s.add_argument("mod")
+    s.set_defaults(func=cmd_mod_info)
+
+    s = sub.add_parser("mod-pack", help="pack a mod folder into a shareable .rsmod file")
+    s.add_argument("folder")
+    s.add_argument("output")
+    s.set_defaults(func=cmd_mod_pack)
+
+    s = sub.add_parser("mod-install", help="install a mod into a game")
+    s.add_argument("game")
+    s.add_argument("mod")
+    s.add_argument("--yes", action="store_true", help="confirm installing mods that contain code")
+    s.set_defaults(func=cmd_mod_install)
+
+    s = sub.add_parser("mod-uninstall", help="uninstall a mod from a game")
+    s.add_argument("game")
+    s.add_argument("id")
+    s.set_defaults(func=cmd_mod_uninstall)
+
+    s = sub.add_parser("mod-list", help="list mods installed in a game")
+    s.add_argument("game")
+    s.set_defaults(func=cmd_mod_list)
     return p
 
 
@@ -258,5 +334,5 @@ def main(argv=None):
         return
     try:
         args.func(args)
-    except (FileNotFoundError, rpa.RPAError, rpyc.RpycError, ValueError) as exc:
+    except (FileNotFoundError, rpa.RPAError, rpyc.RpycError, mods.ModError, ValueError) as exc:
         sys.exit("error: %s" % exc)

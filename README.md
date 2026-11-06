@@ -31,6 +31,7 @@ and switch on the developer console. It comes with a GUI and a command-line inte
 | **Save signing** | Ren'Py 8.1+ signs saves and persistent data. Edited files are re-signed with **your own** local key, so the game accepts them without warnings. |
 | **Developer patch** | One click enables developer mode, the console (Shift+O), always-allowed skipping and rollback. Removing it is just as easy. |
 | **Live connection** | Change variables of the *running* game instantly, and have the game reload automatically when you save an edited script. |
+| **Mods** | Share and import mods, a bit like Cheat Engine tables. One `.rsmod` file can carry new scripts, script changes and one-click cheats. Uninstalling is clean. |
 | **CLI** | Every feature is scriptable from the command line. |
 
 ## Requirements
@@ -53,7 +54,8 @@ Then click **Choose game folder…** and select the folder that contains the gam
 ## Using the GUI
 
 The menu bar in the top-left corner holds **File** (choose a game with Ctrl+O, reload with F5, open
-**Settings…**) and **Help** (documentation, GitHub page, **About**).
+**Settings…**), **Mods** (import a mod, open the mod library, mod format) and **Help** (documentation,
+GitHub page, **About**).
 
 ### Settings
 **File → Settings…** lets you choose the **language** (system default, English or Deutsch) and the **theme**
@@ -139,6 +141,26 @@ read-only copies for browsing and searching, and the game doesn't use them.
 
 > **Close the game first.** Ren'Py rewrites its persistent data when it quits and would overwrite your changes.
 
+### Mods
+Mods are shared as `.rsmod` files, much like Cheat Engine tables. **Mods → Import mod…** adds one to your
+mod library, which is kept per user, so you can install it into any game. When you select a mod you see:
+
+- what it contains (scripts, script changes, cheats) and who made it,
+- whether it can be installed into the selected game. Script changes are checked before anything is written,
+  so a game is never left half-modded.
+- **View contents** to read every file and change. Mods with code show a warning before installing,
+  because mod code runs inside the game.
+
+**Install** copies the mod's files to `game/renpy_suite_mods/<mod id>/` and applies its script changes,
+with backups. With the live connection, a running game reloads right away. **Uninstall** undoes
+everything.
+
+**Cheats** are one-click variable values. Select them and click **Apply to running game** (needs the live
+connection) or **Apply to save…** (backed up and re-signed).
+
+Want to make mods? See **[docs/MODDING.md](docs/MODDING.md)** and the example in
+[`examples/quality-of-life`](examples/quality-of-life).
+
 ## Command line
 
 Run `python -m renpy_suite <command> --help` for all options.
@@ -169,6 +191,12 @@ python -m renpy_suite devmode "C:/Games/MyGame" --options live   # then start th
 python -m renpy_suite live "C:/Games/MyGame" --filter affection  # show variables of the running game
 python -m renpy_suite live "C:/Games/MyGame" --set money 5000
 python -m renpy_suite live "C:/Games/MyGame" --reload
+
+python -m renpy_suite mod-pack examples/quality-of-life qol.rsmod  # share a mod folder as one file
+python -m renpy_suite mod-info qol.rsmod
+python -m renpy_suite mod-install "C:/Games/MyGame" qol.rsmod --yes
+python -m renpy_suite mod-list "C:/Games/MyGame"
+python -m renpy_suite mod-uninstall "C:/Games/MyGame" quality-of-life
 ```
 
 Use `--lang en` or `--lang de` (or the `RENPY_SUITE_LANG` environment variable) to override the interface language.
@@ -233,6 +261,7 @@ renpy_suite/
   rpyc.py         .rpyc decompiler
   scriptedit.py   saving edited scripts into a game, with backup/restore
   live.py         live connection to a running game (in-game bridge + client)
+  mods.py         mod format, mod library, installer and cheats
   saves.py        save + persistent files
   savetoken.py    Ren'Py 8.1+ signatures (pure-Python ECDSA P-256)
   stubpickle.py   safe, round-trip capable unpickler
@@ -244,6 +273,8 @@ renpy_suite/
   cli.py          command-line interface
   gui/            Tkinter user interface (theme.py: light/dark themes)
   assets/         application icon
+docs/MODDING.md   how to make mods
+examples/         example mod
 tests/            unit and end-to-end tests (stdlib unittest)
 tools/make_icon.py  draws the icon from code (original artwork, no third-party rights)
 RenPySuite.pyw    double-click launcher

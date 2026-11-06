@@ -15,6 +15,7 @@ from .dialogs import AboutDialog, SettingsDialog, load_icon
 from .tab_archives import ArchivesTab
 from .tab_decompiler import DecompilerTab
 from .tab_game import GameTab
+from .tab_mods import ModsTab
 from .tab_saves import SavesTab
 from .theme import c
 from .widgets import TaskRunner
@@ -57,6 +58,12 @@ class SuiteApp:
             None,
             ("menu_exit", self.on_close, None),
         ])
+        self._menu("menu_mods", [
+            ("menu_import_mod", lambda: self.mods_tab.import_mod(), None),
+            ("menu_mod_folder", lambda: self.mods_tab.open_library(), None),
+            None,
+            ("menu_mod_format", lambda: webbrowser.open(__url__ + "/blob/main/docs/MODDING.md"), None),
+        ])
         self._menu("menu_help", [
             ("menu_docs", lambda: webbrowser.open(__url__ + "#readme"), None),
             ("menu_github", lambda: webbrowser.open(__url__), None),
@@ -80,7 +87,9 @@ class SuiteApp:
             (ArchivesTab(self.notebook, self), "tab_archives"),
             (DecompilerTab(self.notebook, self), "tab_decompiler"),
             (SavesTab(self.notebook, self), "tab_saves"),
+            (ModsTab(self.notebook, self), "tab_mods"),
         ]
+        self.mods_tab = self.tabs[-1][0]
         for tab, key in self.tabs:
             self.notebook.add(tab, text="  %s  " % t(key))
 

@@ -35,19 +35,20 @@ class ScriptEditor:
         self.game = game
         self.backup_root = game.root / BACKUP_DIR
         self.manifest_path = self.backup_root / "manifest.json"
-        self.manifest = self._load_manifest()
 
     # -- manifest ----------------------------------------------------------
+    # Always read from disk: the Scripts tab and the mod installer share it.
 
-    def _load_manifest(self) -> dict:
+    @property
+    def manifest(self) -> dict:
         try:
             return json.loads(self.manifest_path.read_text("utf-8"))
         except (OSError, ValueError):
             return {}
 
-    def _save_manifest(self):
+    def _save_manifest(self, manifest: dict):
         self.backup_root.mkdir(parents=True, exist_ok=True)
-        self.manifest_path.write_text(json.dumps(self.manifest, indent=2), "utf-8")
+        self.manifest_path.write_text(json.dumps(manifest, indent=2), "utf-8")
 
     # -- queries -----------------------------------------------------------
 
@@ -86,7 +87,8 @@ class ScriptEditor:
         """Write ``text`` as the game's version of this script."""
         rel = script_rel(display_name)
         rpy, rpyc_path = self.paths(rel)
-        if rel not in self.manifest:
+        manifest = self.manifest
+        if rel not in manifest:
             entry = {"rpy_backup": None, "rpyc_backup": None, "archive": None, "member": None}
             if rpy.is_file():
                 entry["rpy_backup"] = self._backup_file(rpy, rel + ".rpy")
@@ -109,8 +111,8 @@ class ScriptEditor:
                     rpa.save_raw_index(archive, raw)
                     entry["archive"] = archive.relative_to(self.game.game_dir).as_posix()
                     entry["member"] = member
-            self.manifest[rel] = entry
-            self._save_manifest()
+            manifest[rel] = entry
+            self._save_manifest(manifest)
         rpy.parent.mkdir(parents=True, exist_ok=True)
         rpy.write_text(text, "utf-8")
         return rpy
@@ -118,7 +120,8 @@ class ScriptEditor:
     def restore(self, display_name: str) -> bool:
         """Undo :meth:`apply` for this script. Returns False if it wasn't edited."""
         rel = script_rel(display_name)
-        entry = self.manifest.get(rel)
+        manifest = self.manifest
+        entry = manifest.get(rel)
         if entry is None:
             return False
         rpy, rpyc_path = self.paths(rel)
@@ -136,8 +139,8 @@ class ScriptEditor:
             if key is not None and rpa.find_raw_key(raw, entry["member"]) is None:
                 raw[key] = original[key]
                 rpa.save_raw_index(archive, raw)
-        del self.manifest[rel]
-        self._save_manifest()
+        del manifest[rel]
+        self._save_manifest(manifest)
         return True
 
     def edited(self) -> list:
